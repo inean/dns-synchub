@@ -1,11 +1,17 @@
 from collections.abc import Generator
 from logging import Logger
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from dns_synchub.pollers.traefik import TraefikPoller
 from dns_synchub.settings import Settings
+
+if TYPE_CHECKING:
+    from packages.traefik.src.dns_synchub_traefik import TraefikPoller
+else:
+    dns_synchub_traefik = pytest.importorskip('dns_synchub_traefik')
+    TraefikPoller = dns_synchub_traefik.TraefikPoller
 
 
 @pytest.fixture

@@ -39,7 +39,7 @@ class CloudFlareException(Exception):
 
 def dry_run(func: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitable[Any]]:
     @wraps(func)
-    async def wrapper(self: 'CloudFlareMapper', zone_id: str, *args: Any, **data: Any) -> Any:
+    async def wrapper(self: 'CloudFlareDNSProvider', zone_id: str, *args: Any, **data: Any) -> Any:
         if self.dry_run:
             self.logger.info(f'DRY-RUN: {func.__name__} in zone {zone_id}: {data}')
             return {**data, 'zone_id': zone_id}
@@ -55,8 +55,8 @@ def retry(func: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitable[Any]]:
         logger.warning(f'Max Rate limit reached. Retry in {sleep_time} seconds...')
 
     @wraps(func)
-    async def wrapper(self: 'CloudFlareMapper', *args: Any, **kwargs: Any) -> Any:
-        assert isinstance(self, CloudFlareMapper)
+    async def wrapper(self: 'CloudFlareDNSProvider', *args: Any, **kwargs: Any) -> Any:
+        assert isinstance(self, CloudFlareDNSProvider)
 
         retry = AsyncRetrying(
             stop=stop_after_attempt(self.config['stop']),
@@ -80,7 +80,7 @@ def retry(func: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitable[Any]]:
     return wrapper
 
 
-class CloudFlareMapper(Mapper[PollerData[PollerSourceType], CloudFlare]):
+class CloudFlareDNSProvider(Mapper[PollerData[PollerSourceType], CloudFlare]):
     def __init__(self, logger: Logger, *, settings: Settings, client: CloudFlare | None = None):
         if client is None:
             assert settings.cf_token is not None

@@ -9,6 +9,7 @@
     "service": "app",
 
     "features": {
+        "./features/taplo:1": { },
         "ghcr.io/dhoeric/features/hadolint:1": { },
         "ghcr.io/devcontainers/features/docker-outside-of-docker": {
             "postCreateCommand": "sudo usermod -aG docker vscode"

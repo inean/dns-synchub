@@ -1,20 +1,32 @@
+# pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
+
 import asyncio
 import re
 from collections.abc import Callable, Generator
 from logging import Logger
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 from unittest.mock import AsyncMock, MagicMock, call, patch
 from urllib.parse import urlparse
 
-import docker
-import docker.client
-import docker.errors
 import pytest
 
 from dns_synchub.events.types import Event, EventSubscriber
 from dns_synchub.pollers import PollerData
-from dns_synchub.pollers.docker import DockerError, DockerPoller
 from dns_synchub.settings import Settings
+
+try:
+    import docker
+    import docker.client
+    import docker.errors
+except ImportError:
+    pytest.skip('Docker SDK not installed')
+    pass
+
+if TYPE_CHECKING:
+    from packages.docker.src.dns_synchub_docker import DockerPoller
+else:
+    dns_synchub_docker = pytest.importorskip('dns_synchub_docker')
+    DockerPoller = dns_synchub_docker.DockerPoller
 
 
 class MockDockerEvents:
@@ -112,7 +124,7 @@ def docker_poller(
 def test_docker_init_with_bad_engine(
     logger: MagicMock, settings: Settings, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    with pytest.raises(DockerError) as err:
+    with pytest.raises(ConnectionError) as err:
         monkeypatch.setenv('DOCKER_HOST', 'unix:///')
         DockerPoller(logger, settings=settings).client
     assert str(err.value) == 'Could not connect to Docker'

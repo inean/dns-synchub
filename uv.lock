@@ -8,6 +8,9 @@ resolution-markers = [
 [manifest]
 members = [
     "dns-synchub",
+    "dns-synchub-cloudflare",
+    "dns-synchub-docker",
+    "dns-synchub-traefik",
     "telemetry",
 ]
 
@@ -243,21 +246,26 @@ name = "dns-synchub"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
-    { name = "cloudflare" },
-    { name = "docker" },
     { name = "opentelemetry-distro" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "python-dotenv" },
-    { name = "requests" },
     { name = "telemetry" },
-    { name = "tenacity" },
     { name = "typing-extensions" },
 ]
 
 [package.optional-dependencies]
+cloudflare = [
+    { name = "dns-synchub-cloudflare" },
+]
+docker = [
+    { name = "dns-synchub-docker" },
+]
 otlp = [
     { name = "opentelemetry-exporter-otlp-proto-grpc" },
+]
+traefik = [
+    { name = "dns-synchub-traefik" },
 ]
 
 [package.dev-dependencies]
@@ -274,21 +282,19 @@ dev = [
     { name = "pytest-pretty" },
     { name = "pyupgrade" },
     { name = "ruff" },
-    { name = "types-docker" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "cloudflare", specifier = "<2.20" },
-    { name = "docker", specifier = ">=7.1.0" },
+    { name = "dns-synchub-cloudflare", marker = "extra == 'cloudflare'", editable = "packages/cloudflare" },
+    { name = "dns-synchub-docker", marker = "extra == 'docker'", editable = "packages/docker" },
+    { name = "dns-synchub-traefik", marker = "extra == 'traefik'", editable = "packages/traefik" },
     { name = "opentelemetry-distro", specifier = "==0.48b0" },
     { name = "opentelemetry-exporter-otlp-proto-grpc", marker = "extra == 'otlp'", specifier = ">=0.49b0" },
     { name = "pydantic", specifier = ">=2.0" },
-    { name = "pydantic-settings", git = "https://github.com/inean/pydantic-settings.git?branch=2.3" },
+    { name = "pydantic-settings", git = "https://github.com/inean/pydantic-settings.git?rev=2.3" },
     { name = "python-dotenv", specifier = ">=1.0.1" },
-    { name = "requests", specifier = ">=2.26.0" },
     { name = "telemetry", editable = "packages/telemetry" },
-    { name = "tenacity", specifier = ">=9.0.0" },
     { name = "typing-extensions", specifier = ">=4.5.0" },
 ]
 
@@ -306,8 +312,80 @@ dev = [
     { name = "pytest-pretty", specifier = ">=1.2.0" },
     { name = "pyupgrade", specifier = ">=3.16.0" },
     { name = "ruff", specifier = ">=0.5.4" },
-    { name = "types-docker", specifier = ">=7.1.0" },
 ]
+
+[[package]]
+name = "dns-synchub-cloudflare"
+version = "0.1.0"
+source = { editable = "packages/cloudflare" }
+dependencies = [
+    { name = "cloudflare" },
+    { name = "dns-synchub" },
+    { name = "telemetry" },
+    { name = "tenacity" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "cloudflare", specifier = "<2.20" },
+    { name = "dns-synchub", virtual = "." },
+    { name = "telemetry", editable = "packages/telemetry" },
+    { name = "tenacity", specifier = ">=8.0.1" },
+]
+
+[[package]]
+name = "dns-synchub-docker"
+version = "0.1.0"
+source = { editable = "packages/docker" }
+dependencies = [
+    { name = "dns-synchub" },
+    { name = "docker" },
+    { name = "telemetry" },
+    { name = "tenacity" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "types-docker" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "dns-synchub", virtual = "." },
+    { name = "docker", specifier = ">=7.1.0" },
+    { name = "telemetry", editable = "packages/telemetry" },
+    { name = "tenacity", specifier = ">=8.0.1" },
+]
+
+[package.metadata.requires-dev]
+dev = [{ name = "types-docker", specifier = ">=7.1.0" }]
+
+[[package]]
+name = "dns-synchub-traefik"
+version = "0.1.0"
+source = { editable = "packages/traefik" }
+dependencies = [
+    { name = "dns-synchub" },
+    { name = "requests" },
+    { name = "telemetry" },
+    { name = "tenacity" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "types-requests" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "dns-synchub", virtual = "." },
+    { name = "requests", specifier = ">=2.26.0" },
+    { name = "telemetry", editable = "packages/telemetry" },
+    { name = "tenacity", specifier = ">=8.0.1" },
+]
+
+[package.metadata.requires-dev]
+dev = [{ name = "types-requests", specifier = ">=2.26.0" }]
 
 [[package]]
 name = "docker"
@@ -735,7 +813,7 @@ wheels = [
 [[package]]
 name = "pydantic-settings"
 version = "2.3.4"
-source = { git = "https://github.com/inean/pydantic-settings.git?branch=2.3#209f3fcc0d6908a5b2a81e59ad2f97d317ccaf2d" }
+source = { git = "https://github.com/inean/pydantic-settings.git?rev=2.3#209f3fcc0d6908a5b2a81e59ad2f97d317ccaf2d" }
 dependencies = [
     { name = "pydantic" },
     { name = "python-dotenv" },

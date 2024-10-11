@@ -9,7 +9,7 @@
     "python.testing.pytestArgs": [
         "tests"
     ],
-    "python.analysis.typeCheckingMode": "basic",
+    "python.analysis.typeCheckingMode": "strict",
     "python.analysis.autoImportCompletions": true,
     "python.analysis.extraPaths": [
         "${workspaceFolder}/types"

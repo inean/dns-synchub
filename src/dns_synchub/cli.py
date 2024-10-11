@@ -8,10 +8,8 @@ from typing import Any
 import dotenv
 
 from dns_synchub.__about__ import __version__ as VERSION
-from dns_synchub.mappers.cloudflare import CloudFlareMapper
+from dns_synchub.mappers import Mapper
 from dns_synchub.pollers import Poller
-from dns_synchub.pollers.docker import DockerPoller
-from dns_synchub.pollers.traefik import TraefikPoller
 from dns_synchub.settings import Settings
 
 
@@ -53,13 +51,20 @@ def parse_args() -> Args:
 
 async def main(log: Logger, *, settings: Settings) -> None:
     # Add Cloudflarte mapper
-    dns = CloudFlareMapper(log, settings=settings)
+    try:
+        dns = Mapper.backends['cloudflare']
+        dns = dns(log, settings=settings)
+    except KeyError:
+        log.error('No Cloudflare mapper found')
+        return
 
     # Add Pollers
     pollers: list[Poller[Any]] = []
     if settings.enable_traefik_poll:
+        TraefikPoller = Poller.backends['traefik']
         pollers.append(TraefikPoller(log, settings=settings))
     if settings.enable_docker_poll:
+        DockerPoller = Poller.backends['docker']
         pollers.append(DockerPoller(log, settings=settings))
 
     # Start Pollers

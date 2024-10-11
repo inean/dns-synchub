@@ -2,6 +2,8 @@ import asyncio
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from functools import lru_cache
+from importlib import metadata
 from logging import Logger
 from typing import (
     Any,
@@ -20,15 +22,15 @@ from typing_extensions import override
 
 from dns_synchub.events import EventEmitter
 from dns_synchub.events.types import EventSubscriberType
+from dns_synchub.pollers.types import PollerSourceType
 from dns_synchub.settings import Settings
 from dns_synchub.telemetry_constants import (
     TelemetryAttributes as Attrs,
     TelemetryConstants as Constants,
     TelemetrySpans as Spans,
 )
-from dns_synchub.tracer import StatusCode, telemetry_tracer
-
-from .types import PollerSourceType
+from dns_synchub.tracer import telemetry_tracer
+from dns_synchub.utils._classproperty import classproperty
 
 T = TypeVar('T')
 
@@ -186,12 +188,10 @@ class Poller(BasePoller[PollerSourceType], Generic[T]):
         assert self._client is not None, 'Client is not initialized'
         return self._client
 
-
-# ruff: noqa: E402
-
-from dns_synchub.pollers.docker import DockerPoller
-from dns_synchub.pollers.traefik import TraefikPoller
-
-# ruff: enable
-
-__all__ = ['TraefikPoller', 'DockerPoller', 'StatusCode']
+    @classproperty
+    @lru_cache(maxsize=None)
+    def backends(cls) -> dict[str, Any]:
+        backends: dict[str, Any] = {}
+        for entry_point in metadata.entry_points(group='dns_synchub.pollers'):
+            backends[entry_point.name] = entry_point.load()
+        return backends

@@ -1,10 +1,11 @@
+# pyright: reportPrivateUsage=false
+
 import asyncio
 import inspect
 from collections.abc import Callable
 from typing import (
     Any,
     TypeVar,
-    cast,
 )
 from unittest.mock import patch
 
@@ -13,16 +14,9 @@ from telemetry import Instrument, instrument
 
 F = TypeVar('F', bound=Callable[..., Any] | type)
 
-DecorateFunc = Callable[[Callable[..., Any]], Callable[..., Any]]
 
-
-@pytest.fixture(params=[instrument])
-def decorator(request: pytest.FixtureRequest) -> Callable[[F], F]:
-    return cast(Callable[[F], F], request.param)
-
-
-def test_decorator_on_function(decorator: DecorateFunc) -> None:
-    @decorator
+def test_decorator_on_function() -> None:
+    @instrument
     def regular_function(x: int, y: int) -> int:
         return x + y
 
@@ -30,8 +24,8 @@ def test_decorator_on_function(decorator: DecorateFunc) -> None:
     assert Instrument.is_instrumented(regular_function)
 
 
-def test_decorator_on_async_function(decorator: DecorateFunc) -> None:
-    @decorator
+def test_decorator_on_async_function() -> None:
+    @instrument
     async def async_function(x: int, y: int) -> int:
         return x * y
 
@@ -40,9 +34,9 @@ def test_decorator_on_async_function(decorator: DecorateFunc) -> None:
     assert Instrument.is_instrumented(async_function)
 
 
-def test_decorator_on_static_method(decorator: DecorateFunc) -> None:
+def test_decorator_on_static_method() -> None:
     class SampleClass:
-        @decorator
+        @instrument
         @staticmethod
         def static_method(x: int) -> int:
             return x - 1
@@ -51,12 +45,12 @@ def test_decorator_on_static_method(decorator: DecorateFunc) -> None:
     assert Instrument.is_instrumented(SampleClass.static_method)
 
 
-def test_decorator_on_class_method(decorator: DecorateFunc) -> None:
+def test_decorator_on_class_method() -> None:
     class SampleClass:
         value = 10
 
         @classmethod
-        @decorator
+        @instrument
         def class_method(cls, x: int) -> int:
             return cls.value + x
 
@@ -82,11 +76,11 @@ def test_class_method_decorator_with_args() -> None:
     ), f'Expected {expected_signature}, but got {original_signature}'
 
 
-def test_decorator_on_class_method_inv(decorator: DecorateFunc) -> None:
+def test_decorator_on_class_method_inv() -> None:
     class SampleClass:
         value = 10
 
-        @decorator
+        @instrument
         @classmethod
         def class_method(cls, x: int) -> int:
             return cls.value + x
@@ -95,13 +89,13 @@ def test_decorator_on_class_method_inv(decorator: DecorateFunc) -> None:
     assert Instrument.is_instrumented(SampleClass.class_method)
 
 
-def test_decorator_on_property_method(decorator: DecorateFunc) -> None:
+def test_decorator_on_property_method() -> None:
     class SampleClass:
         def __init__(self, value: int):
             self._value = value
 
         @property
-        @decorator
+        @instrument
         def value(self) -> int:
             return self._value
 
@@ -110,9 +104,9 @@ def test_decorator_on_property_method(decorator: DecorateFunc) -> None:
     assert Instrument.is_instrumented(SampleClass, 'value', descriptor='fget')
 
 
-def test_decorator_on_protected_method(decorator: DecorateFunc) -> None:
+def test_decorator_on_protected_method() -> None:
     class SampleClass:
-        @decorator
+        @instrument
         def _protected_method(self) -> int:
             return 30
 
@@ -130,9 +124,9 @@ def test_decorator_with_ignore_option() -> None:
     assert not Instrument.is_instrumented(ignored_function)
 
 
-def test_decorator_on_async_method(decorator: DecorateFunc) -> None:
+def test_decorator_on_async_method() -> None:
     class SampleClass:
-        @decorator
+        @instrument
         async def async_method(self) -> int:
             return 50
 
@@ -142,12 +136,12 @@ def test_decorator_on_async_method(decorator: DecorateFunc) -> None:
     assert Instrument.is_instrumented(SampleClass, 'async_method')
 
 
-def test_decorator_on_already_instrumented_method(decorator: DecorateFunc) -> None:
+def test_decorator_on_already_instrumented_method() -> None:
     with patch.object(Instrument, '_set_mark', wraps=Instrument._set_mark) as mock_set_mark:
 
         class SampleClass:
-            @decorator
-            @decorator
+            @instrument
+            @instrument
             def method(self) -> int:
                 return 42
 
@@ -160,13 +154,13 @@ def test_decorator_on_already_instrumented_method(decorator: DecorateFunc) -> No
         mock_set_mark.assert_called_once()
 
 
-def test_decorator_on_class(decorator: DecorateFunc) -> None:
-    @decorator
+def test_decorator_on_class() -> None:
+    @instrument
     class InstrumentedClass:
         def a_method(self) -> int:
             return 42
 
-        @decorator
+        @instrument
         def an_already_instrumented_method(self) -> int:
             return 42
 
@@ -182,7 +176,7 @@ def test_decorator_on_class(decorator: DecorateFunc) -> None:
             return 42
 
         @property  # properties are not instrumented by default
-        @decorator
+        @instrument
         def a_property(self) -> int:
             return 42
 

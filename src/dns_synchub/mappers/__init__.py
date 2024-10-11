@@ -1,6 +1,9 @@
-from abc import ABC
+from abc import ABC, abstractmethod
+from functools import lru_cache
+from importlib import metadata
 from logging import Logger
 from typing import (
+    Any,
     Generic,
     Protocol,
     TypedDict,
@@ -10,21 +13,17 @@ from typing import (
 
 from dns_synchub.events.types import (
     EventSubscriber,
-    EventSubscriberType,
+    EventSubscriberType as EventSubscriberType,
 )
 from dns_synchub.pollers.types import (
-    PollerSourceType,
+    PollerSourceType as PollerSourceType,
 )
 from dns_synchub.settings import Settings
 from dns_synchub.settings.types import (
     Domains,
 )
-from dns_synchub.telemetry_constants import (
-    TelemetryAttributes as Attrs,
-    TelemetryConstants as Constants,
-    TelemetrySpans as Spans,
-)
-from dns_synchub.tracer import StatusCode, telemetry_tracer
+from dns_synchub.tracer import telemetry_tracer
+from dns_synchub.utils._classproperty import classproperty
 
 T = TypeVar('T')  # Client backemd
 E = TypeVar('E')  # Event type accepted
@@ -33,6 +32,7 @@ R = TypeVar('R')  # Result type
 
 @runtime_checkable
 class MapperProtocol(EventSubscriber[E], Protocol[E, R]):
+    @abstractmethod
     async def sync(self, data: E) -> list[R] | None: ...
 
 
@@ -79,15 +79,10 @@ class Mapper(BaseMapper[E, Domains], Generic[E, T]):
         assert self._client is not None, 'Client is not initialized'
         return self._client
 
-
-from dns_synchub.mappers.cloudflare import CloudFlareMapper  # noqa: E402
-
-__all__ = [
-    'CloudFlareMapper',
-    'Attrs',
-    'Constants',
-    'Spans',
-    'EventSubscriberType',
-    'PollerSourceType',
-    'StatusCode',
-]
+    @classproperty
+    @lru_cache(maxsize=None)
+    def backends(cls) -> dict[str, Any]:
+        backends: dict[str, Any] = {}
+        for entry_point in metadata.entry_points(group='dns_synchub.mappers'):
+            backends[entry_point.name] = entry_point.load()
+        return backends

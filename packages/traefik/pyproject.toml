@@ -1,0 +1,41 @@
+[project]
+  name = "dns-synchub-traefik"
+  version = "0.1.0"
+  description = "Trefik poller (sync) for DNS Synchub"
+  readme = "README.md"
+  authors = [
+    { name = "Carlos Martín", email = "inean.es@gmail.com" },
+  ]
+  requires-python = ">=3.11"
+  dependencies = [
+    "dns-synchub",
+    "telemetry",
+    # External dependencies
+    "requests>=2.26.0",
+    "tenacity>=8.0.1",
+  ]
+
+[tool.uv]
+  dev-dependencies = [
+    # Type stubs
+    "types-requests>=2.26.0",
+  ]
+
+[build-system]
+  requires = [
+    "hatchling",
+  ]
+  build-backend = "hatchling.build"
+
+[project.entry-points.'dns_synchub.pollers']
+  traefik = 'dns_synchub_traefik:TraefikPoller'
+
+[tool.uv.workspace]
+  members = [
+    "../*",
+    "../..",
+  ]
+
+[tool.uv.sources]
+  dns-synchub = { workspace = true }
+  telemetry   = { workspace = true }

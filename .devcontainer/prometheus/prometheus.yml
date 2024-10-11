@@ -7,4 +7,3 @@ scrape_configs:
     static_configs:
       - targets:
         - "otelcol:8888" # Otel Collectort Metrics
-

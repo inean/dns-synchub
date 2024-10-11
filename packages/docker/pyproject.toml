@@ -1,0 +1,45 @@
+[project]
+  name = "dns-synchub-docker"
+  version = "0.1.0"
+  description = "Add your description here"
+  readme = "README.md"
+  authors = [
+    { name = "Carlos Martín", email = "inean.es@gmail.com" },
+  ]
+  requires-python = ">=3.11"
+  dependencies = [
+    "dns-synchub",
+    "telemetry",
+    # External dependencies
+    "docker>=7.1.0",
+    "tenacity>=8.0.1",
+  ]
+
+##
+# Build system configuration (uv)
+##
+[tool.uv]
+  dev-dependencies = [
+    # Type stubs
+    "types-docker>=7.1.0",
+  ]
+
+[build-system]
+  requires = [
+    "hatchling",
+  ]
+  build-backend = "hatchling.build"
+
+
+[project.entry-points.'dns_synchub.pollers']
+  docker = 'dns_synchub_docker:DockerPoller'
+
+[tool.uv.workspace]
+  members = [
+    "../*",
+    "../..",
+  ]
+
+[tool.uv.sources]
+  dns-synchub = { workspace = true }
+  telemetry   = { workspace = true }

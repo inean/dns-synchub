@@ -96,9 +96,9 @@ docker pull ghcr.io/inean/dns-synchub:(imagetag)
 
 The following image tags are available along with their tagged release based on what's written in the [Changelog](CHANGELOG.md):
 
-| Container OS             | Tag       |
-| ------------------------ | --------- |
-| python-`<version>`-slim  | `:latest` |
+| Container OS            | Tag       |
+| ----------------------- | --------- |
+| python-`<version>`-slim | `:latest` |
 
 The current Python version is specified in the `.python-version` file.
 
@@ -118,11 +118,11 @@ Upon startup, the image scans containers for Traefik labels used to define routi
 
 A DNS record update requires the following parameters. These parameters have default values but can be customized on a per-domain basis:
 
-| Parameter       | Description                                       | Required | Default Value |
-|-----------------|---------------------------------------------------|----------|---------------|
-| `NAME`          | The name of the domain to be updated.             | Yes      | N/A           |
-| `TARGET_DOMAIN` | The target domain for the DNS record.             | Yes      | N/A           |
-| `RC_TYPE`       | The type of DNS record (e.g., A, CNAME, etc.).    | No       | CNAME         |
+| Parameter       | Description                                    | Required | Default Value |
+| --------------- | ---------------------------------------------- | -------- | ------------- |
+| `NAME`          | The name of the domain to be updated.          | Yes      | N/A           |
+| `TARGET_DOMAIN` | The target domain for the DNS record.          | Yes      | N/A           |
+| `RC_TYPE`       | The type of DNS record (e.g., A, CNAME, etc.). | No       | CNAME         |
 
 To customize parameters for multiple domains, prefix the default parameters with `DOMAIN` followed by an index, separated by double underscores (`__`), following [Pydantic](https://pydantic-docs.helpmanual.io/) logic for setting.
 
@@ -246,13 +246,13 @@ secrets:
 
 #### General Settings
 
-| Parameter         | Description                                      | Type                       | Default         |
-|-------------------|--------------------------------------------------|----------------------------|-----------------|
-| `DRY_RUN`         | Perform a test run without making any changes.   | `BOOL`                     | `FALSE`         |
-| `LOG_LEVEL`       | Logging level.                                   | `INFO, VERBOSE, DEBUG`     | `INFO`          |
-| `LOG_TYPE`        | Log type.                                        | `CONSOLE, FILE, BOTH`      | `BOTH`          |
-| `LOG_FILE`        | Absolute filepath for the log file               | `STR`                      | `/logs/tcc.log` |
-| `REFRESH_ENTRIES` | If record exists, update entry with new values   | `BOOL`                     | `FALSE`         |
+| Parameter         | Description                                    | Type                   | Default         |
+| ----------------- | ---------------------------------------------- | ---------------------- | --------------- |
+| `DRY_RUN`         | Perform a test run without making any changes. | `BOOL`                 | `FALSE`         |
+| `LOG_LEVEL`       | Logging level.                                 | `INFO, VERBOSE, DEBUG` | `INFO`          |
+| `LOG_TYPE`        | Log type.                                      | `CONSOLE, FILE, BOTH`  | `BOTH`          |
+| `LOG_FILE`        | Absolute filepath for the log file             | `STR`                  | `/logs/tcc.log` |
+| `REFRESH_ENTRIES` | If record exists, update entry with new values | `BOOL`                 | `FALSE`         |
 
 #### Discovery Settings
 
@@ -275,18 +275,18 @@ To assign multiple DNS records to a single container, use the following format, 
 
 ##### Docker Options
 
-| Parameter               | Description                                      | Type    | Default |
-| ----------------------- | ------------------------------------------------ | ------- | ------- |
-| `ENABLE_DOCKER_POLL`    | Enable or disable Docker polling.                | `BOOL`  | `TRUE`  |
-| `DOCKER_TIMEOUT_SECONDS`| Timeout for HTTP calls to Docker API.            | `INT`   | `5`     |
-| `DOCKER_POLL_SECONDS`   | Polling interval in seconds.                     | `INT`   | `30`    |
+| Parameter                | Description                           | Type   | Default |
+| ------------------------ | ------------------------------------- | ------ | ------- |
+| `ENABLE_DOCKER_POLL`     | Enable or disable Docker polling.     | `BOOL` | `TRUE`  |
+| `DOCKER_TIMEOUT_SECONDS` | Timeout for HTTP calls to Docker API. | `INT`  | `5`     |
+| `DOCKER_POLL_SECONDS`    | Polling interval in seconds.          | `INT`  | `30`    |
 
 ##### Filtering (Docker exclusively)
 
-| Parameter               | Description                            | Type  | Default              |
-| ----------------------- | -------------------------------------- | ----- | -------------------- |
-| `DOCKER_FILTER_LABEL`   | A Pattern to filter Traefik label.     | `STR` | `traefik.constraint` |
-| `DOCKER_FILTER_VALUE`   | A Pattern to filter Traefik values.    | `STR` | `.*`                 |
+| Parameter             | Description                         | Type  | Default              |
+| --------------------- | ----------------------------------- | ----- | -------------------- |
+| `DOCKER_FILTER_LABEL` | A Pattern to filter Traefik label.  | `STR` | `traefik.constraint` |
+| `DOCKER_FILTER_VALUE` | A Pattern to filter Traefik values. | `STR` | `.*`                 |
 
 > **Note:** If `DOCKER_FILTER_VALUE` is not defined, `dns-snchub` will not filter containers based on `DOCKER_FILTER_LABEL`. If it is defined, `dns-synchub` will apply the specified pattern, and only the services that match this pattern will be used to update DNS records.
 
@@ -310,12 +310,12 @@ The polling interval can be adjusted by setting the `TRAEFIK_POLL_SECONDS` envir
 
 ##### Traefik Options
 
-| Parameter                | Description                                      | Type                        | Default              |
-| ------------------------ | ------------------------------------------------ | --------------------------- | -------              |
-| `ENABLE_TRAEFIK_POLL`    | Enable or disable Traefik polling.               | `bool`                      | `False`              |
-| `TRAEFIK_TIMEOUT_SECONDS`| Timeout for HTTP calls to Traefik API.           | `int`                       | `5`                  |
-| `TRAEFIK_POLL_SECONDS`   | Polling interval in seconds.                     | `int`                       | `30`                 |
-| `TRAEFIK_POLL_URL`       | URL for Traefik polling.                         | `str`                       | `N/A`                |
+| Parameter                 | Description                            | Type   | Default |
+| ------------------------- | -------------------------------------- | ------ | ------- |
+| `ENABLE_TRAEFIK_POLL`     | Enable or disable Traefik polling.     | `bool` | `False` |
+| `TRAEFIK_TIMEOUT_SECONDS` | Timeout for HTTP calls to Traefik API. | `int`  | `5`     |
+| `TRAEFIK_POLL_SECONDS`    | Polling interval in seconds.           | `int`  | `30`    |
+| `TRAEFIK_POLL_URL`        | URL for Traefik polling.               | `str`  | `N/A`   |
 
 #### Synchronization Settings
 
@@ -323,13 +323,13 @@ The synchronization settings control how `dns-synchub` interacts with the DNS pr
 
 Key configuration options include:
 
-| Parameter       | Description                          | Type             | Default |
-|-----------------|--------------------------------------|------------------|---------|
-| `TARGET_DOMAIN` | The target domain for DNS records.   | `STR`            | `N/A`   |
-| `DEFAULT_TTL`   | Default Time-To-Live for DNS records.| `INT`            | `1`\[^1\] |
-| `PROXIED`       | Whether the DNS record is proxied.   | `BOOL`           | `TRUE`  |
-| `RC_TYPE`       | Type of DNS record (e.g., CNAME).    | `A, AAAA, CNAME` | `CNAME` |
-| `ZONE_ID`       | Domain Zone ID                       | `STR`            | `N/A`   |
+| Parameter       | Description                           | Type             | Default   |
+| --------------- | ------------------------------------- | ---------------- | --------- |
+| `TARGET_DOMAIN` | The target domain for DNS records.    | `STR`            | `N/A`     |
+| `DEFAULT_TTL`   | Default Time-To-Live for DNS records. | `INT`            | `1`\[^1\] |
+| `PROXIED`       | Whether the DNS record is proxied.    | `BOOL`           | `TRUE`    |
+| `RC_TYPE`       | Type of DNS record (e.g., CNAME).     | `A, AAAA, CNAME` | `CNAME`   |
+| `ZONE_ID`       | Domain Zone ID                        | `STR`            | `N/A`     |
 
 \[^1\]: If `1` is set, the TTL will be configured automatically based on the DNS provider's settings. For example, Cloudflare sets the TTL to 30 seconds for paid accounts and 60 seconds for free accounts.
 
@@ -337,11 +337,11 @@ Key configuration options include:
 
 Environment variables prefixed with `DOMAIN` enable customization of DNS record creation. For more details, see the [Configuring DNS Record Updates](#configuring-dns-record-updates) section.
 
-| Parameter                             | Description                                              | Type   | Default |
-| ------------------------------------- | -------------------------------------------------------- | ------ | ------- |
-| `DOMAIN__<XXX>__NAME`                 | The domain name for which you wish to update records.    | `STR`  |         |
-| `DOMAIN__<XXX>__COMMENT`              | (Optional) Comment for the DNS record.                   | `STR`  | `NONE`  |
-| `DOMAIN__<XXX>__EXCLUDED_SUB_DOMAINS` | Specify subdomain trees to be ignored in labels\[^2\].     | `LIST` | `[]`    |
+| Parameter                             | Description                                            | Type   | Default |
+| ------------------------------------- | ------------------------------------------------------ | ------ | ------- |
+| `DOMAIN__<XXX>__NAME`                 | The domain name for which you wish to update records.  | `STR`  |         |
+| `DOMAIN__<XXX>__COMMENT`              | (Optional) Comment for the DNS record.                 | `STR`  | `NONE`  |
+| `DOMAIN__<XXX>__EXCLUDED_SUB_DOMAINS` | Specify subdomain trees to be ignored in labels\[^2\]. | `LIST` | `[]`    |
 
 The following optional parameters may also be defined to customize domain update behavior, otherwise, default values will be used:
 
@@ -357,10 +357,10 @@ The following optional parameters may also be defined to customize domain update
 
 For detailed usage information, please refer to the [Pattern Matching](#pattern-matching) section.
 
-| Parameter               | Description                                      | Type                | Default |
-|-------------------------|--------------------------------------------------|---------------------|---------|
-| `INCLUDED_HOSTS__<XXX>` | List of regex patterns for included hosts.       | `list[re.Pattern]`  | `[]`    |
-| `EXCLUDED_HOSTS__<XXX>` | List of regex patterns for excluded hosts.       | `list[re.Pattern]`  | `[]`    |
+| Parameter               | Description                                | Type               | Default |
+| ----------------------- | ------------------------------------------ | ------------------ | ------- |
+| `INCLUDED_HOSTS__<XXX>` | List of regex patterns for included hosts. | `list[re.Pattern]` | `[]`    |
+| `EXCLUDED_HOSTS__<XXX>` | List of regex patterns for excluded hosts. | `list[re.Pattern]` | `[]`    |
 
 #### Cloudflare
 

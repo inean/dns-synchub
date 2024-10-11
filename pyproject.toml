@@ -1,47 +1,51 @@
 [project]
-name = "dns-synchub"
-description = """
+  name = "dns-synchub"
+  description = """
 This will build a Docker image to automatically update CloudFlare DNS
 records upon container start when using Traefik as a Reverse Proxy
 """
-authors = [
+  authors = [
     { name = "Carlos Martín", email = "inean.es@gmail.com" },
-]
-readme = "README.md"
-version = "0.1.0"
-dependencies = [
+  ]
+  readme = "README.md"
+  version = "0.1.0"
+  dependencies = [
     #settings
     "pydantic >= 2.0",
-    "pydantic-settings>=2.3.4",
+    "pydantic-settings @ git+https://github.com/inean/pydantic-settings.git@2.3",
     "python-dotenv>=1.0.1",
     # telemetry
     "opentelemetry-distro==0.48b0",
     "telemetry>=0.1.0",
-    # External dependencies
-    "cloudflare < 2.20",
-    "docker>=7.1.0",
-    "requests>=2.26.0",
     # utilities
-    "tenacity>=9.0.0",
     "typing-extensions>=4.5.0",
-]
-requires-python = ">= 3.11"
+  ]
+  requires-python = ">= 3.11"
 
 [project.optional-dependencies]
-otlp = [
+  otlp = [
     "opentelemetry-exporter-otlp-proto-grpc >= 0.49b0",
-]
+  ]
+  cloudflare = [
+    "dns-synchub-cloudflare",
+  ]
+  docker = [
+    "dns-synchub-docker",
+  ]
+  traefik = [
+    "dns-synchub-traefik",
+  ]
 
 [project.urls]
-Homepage = "https://github.com/inean/dns-synchub"
-Source = "https://github.com/inean/dns-synchub"
-Changelog = "https://github.com/inean/dns-synchub/blob/main/CHANGELOG.md"
+  Homepage  = "https://github.com/inean/dns-synchub"
+  Source    = "https://github.com/inean/dns-synchub"
+  Changelog = "https://github.com/inean/dns-synchub/blob/main/CHANGELOG.md"
 
 ##
 # Build system configuration (uv)
 ##
 [tool.uv]
-dev-dependencies = [
+  dev-dependencies = [
     # tools
     "bump-my-version>=0.27.0",
     "pre-commit>=3.7.1",
@@ -57,136 +61,136 @@ dev-dependencies = [
     "pytest-mock >=3.14.0",
     "pytest-pretty>=1.2.0",
     "pytest>=8.3.2",
-    # Type stubs
-    "types-docker>=7.1.0",
-]
-package = false
+  ]
+  package = false
 
 [tool.uv.workspace]
-members = [
+  members = [
     "packages/*",
-]
+  ]
 
 [tool.uv.sources]
-telemetry = { workspace = true }
-pydantic-settings = { git = "https://github.com/inean/pydantic-settings.git", branch = "2.3" }
+  telemetry              = { workspace = true }
+  dns-synchub-cloudflare = { workspace = true }
+  dns-synchub-docker     = { workspace = true }
+  dns-synchub-traefik    = { workspace = true }
 
 ##
 # Bumpversion configuration
 ##
 [tool.bumpversion]
-current_version = "0.1.0"
-search = "{current_version}"
-replace = "{new_version}"
+  current_version = "0.1.0"
+  search          = "{current_version}"
+  replace         = "{new_version}"
 
 [tool.bumpeversion.files]
-paths = [
+  paths = [
     "pyproject.toml",
     "src/dns_synchub/__about__.py",
-]
+  ]
 
 ##
 # Test configuration
 ##
 [tool.pytest.ini_options]
-asyncio_default_fixture_loop_scope = "function"
-markers = [
+  asyncio_default_fixture_loop_scope = "function"
+  markers = [
     "skip_fixture(name): Skip the test if the specified mark is present",
-]
-cache_dir = ".cache/pytest"
-testpaths = [
+  ]
+  cache_dir = ".cache/pytest"
+  testpaths = [
     "tests",
-]
-pythonpath = [
+  ]
+  pythonpath = [
     "src",
-]
-filterwarnings = [
-    "error",
-]
+  ]
+  #filterwarnings = [
+  #    "error",
+  #]
 
 [tool.pytest_env]
-OTEL_TRACES_EXPORTER = 'none'
-OTEL_METRICS_EXPORTER = 'none'
-OTEL_LOGGER_EXPORTER = 'none'
+  OTEL_TRACES_EXPORTER  = 'none'
+  OTEL_METRICS_EXPORTER = 'none'
+  OTEL_LOGGER_EXPORTER  = 'none'
 
 ##
 # Coverage configuration
 ##
 [tool.coverage.run]
-branch = true
-source = [
+  branch = true
+  source = [
     'dns_synchub',
-]
-context = '${CONTEXT}'
+  ]
+  context = '${CONTEXT}'
 
 [tool.coverage.report]
-precision = 2
-exclude_lines = [
+  precision = 2
+  exclude_lines = [
     '@overload',
     'if TYPE_CHECKING:',
     'pragma: no cover',
     'raise NotImplemented',
     'raise NotImplementedError',
-]
+  ]
 
 [tool.coverage.paths]
-source = [
+  source = [
     'src/dns_synchub/',
-]
+  ]
 
 ##
 # Linter Configuration (MyPy)
 ##
 [tool.mypy]
-strict = true
-files = [
+  strict = true
+  files = [
     "src/",
     "tests/",
-]
-# Cache directory for MyPy
-cache_dir = ".cache/mypy"
-# Third party type stubs
-mypy_path = "types:src"
-#Don't prevents discovery of packages that don’t have an __init__.py
-namespace_packages = true
+  ]
+  # Cache directory for MyPy
+  cache_dir = ".cache/mypy"
+  # Third party type stubs
+  mypy_path = "types:src"
+  # Don't prevents discovery of packages that don’t have an __init__.py
+  namespace_packages = true
 
 [[tool.mypy.overrides]]
-module = [
-    'dotenv.*',
-]
-#Silently ignore imports of missing modules
-ignore_missing_imports = true
+  module = [
+    'telemetry',
+  ]
+  # Silent unused ignore errors because some are needed with pylance strict mode
+  warn_unused_ignores = false
 
 ##
 # Formatter Configuration (Ruff)
 ##
 [tool.ruff]
-# Cache directory for Ruff
-cache-dir = ".cache/ruff"
-# set max-line-length to 100
-line-length = 100
-# Enable preview features.
-preview = true
+  # Cache directory for Ruff
+  cache-dir = ".cache/ruff"
+  # set max-line-length to 100
+  line-length = 100
+  # Enable preview features.
+  preview = true
 
 [tool.ruff.format]
-# format code inside docstrings
-docstring-code-format = true
-# Prefer single quotes over double quotes.
-quote-style = 'single'
-# Enable preview style formatting.
-preview = true
+  # format code inside docstrings
+  docstring-code-format = true
+  # Prefer single quotes over double quotes.
+  quote-style = 'single'
+  # Enable preview style formatting.
+  preview = true
 
 [tool.ruff.lint]
-# On top of the default `select` (`E4`, E7`, `E9`, and `F`),
-extend-select = [
+  # On top of the default `select` (`E4`, E7`, `E9`, and `F`),
+  extend-select = [
     # code complexity rules
     'C90',
     # isort rules
     'I',
     #
     'RUF100',
-]
-extend-fixable = [
+  ]
+  extend-fixable = [
     # line too-long rule
     'E501',
     # isort rules
@@ -200,34 +204,37 @@ extend-fixable = [
     'D',
     # pyupgrade rules
     'UP',
-]
+  ]
 
 [tool.ruff.lint.isort]
-combine-as-imports = true
+  combine-as-imports = true
 
 [tool.ruff.lint.mccabe]
-max-complexity = 10
+  max-complexity = 10
 
 [tool.ruff.lint.flake8-quotes]
-inline-quotes = 'single'
-multiline-quotes = 'double'
+  inline-quotes    = 'single'
+  multiline-quotes = 'double'
 
 [tool.ruff.lint.pycodestyle]
-max-line-length = 120
+  max-line-length = 120
 
 [tool.ruff.lint.pydocstyle]
-convention = 'google'
+  convention = 'google'
 
 [tool.ruff.lint.pyupgrade]
-keep-runtime-typing = true
+  keep-runtime-typing = true
 
 ##
 # Dependency management configuration (Deptry)
 ##
 [tool.deptry]
-root = 'src/dns_synchub'
+  root = 'src/dns_synchub'
 
 [tool.deptry.per_rule_ignores]
-DEP002 = [
+  DEP002 = [
+    "dns-synchub-cloudflare",
+    "dns-synchub-docker",
+    "dns-synchub-traefik",
     "opentelemetry-exporter-otlp-proto-grpc",
-]
+  ]

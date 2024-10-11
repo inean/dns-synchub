@@ -8,9 +8,8 @@ from tenacity import AsyncRetrying, RetryError, stop_after_attempt, wait_exponen
 from typing_extensions import override
 
 from dns_synchub.pollers import Poller, PollerData
+from dns_synchub.pollers.types import PollerSourceType
 from dns_synchub.settings import Settings
-
-from .types import PollerSourceType
 
 
 class TimeoutSession(Session):

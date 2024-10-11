@@ -1,17 +1,14 @@
 # python generated files
-__pycache__/
-*.py[oc]
-build/
-dist/
-wheels/
-*.egg-info
-.*_cache
-.cache
+.cache/*
+!**/.gitkeep
+
+# Ignore all uv.lock files except those in the root directory
+**/uv.lock
+!uv.lock
 
 # venv
-.venv
-.env
-requirements-dev.lock
+**/.venv
+**/.env
 
 # Coverage and test reports
 .coverage

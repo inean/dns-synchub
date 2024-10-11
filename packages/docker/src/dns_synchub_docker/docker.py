@@ -1,3 +1,5 @@
+# pyright: reportUnknownVariableType=false, reportUnknownArgumentType=false, reportUnknownMemberType=false
+
 import asyncio
 import logging
 import re
@@ -22,15 +24,8 @@ from tenacity import (
 from typing_extensions import override
 
 from dns_synchub.pollers import Poller, PollerData
+from dns_synchub.pollers.types import PollerSourceType
 from dns_synchub.settings import Settings
-
-from .types import PollerSourceType
-
-
-class DockerError(Exception):
-    def __init__(self, message: str, *, error: Exception | None = None):
-        super().__init__(message)
-        self.error = error
 
 
 class DockerContainer:
@@ -107,7 +102,7 @@ class DockerPoller(Poller[DockerClient]):
                 self._client = None
                 self.logger.error(f'Could not connect to Docker: {err}')
                 self.logger.error('Please make sure Docker is running and accessible')
-                raise DockerError('Could not connect to Docker', error=err) from err
+                raise ConnectionError('Could not connect to Docker') from err
             else:
                 # Get Docker Host info
                 info = cast(dict[str, Any], self._client.info())  # type: ignore
@@ -212,4 +207,4 @@ class DockerPoller(Poller[DockerClient]):
             last_error = err.last_attempt.result()
             self.logger.critical(f'Could not fetch containers: {last_error}')
         # Return a collection of routes
-        return self._validate(result)
+        return self._validate(result)  # pyright: ignore[reportPossiblyUnboundVariable]

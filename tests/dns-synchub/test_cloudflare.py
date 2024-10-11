@@ -1,18 +1,29 @@
+# pyright: reportPrivateUsage=false
+
 from copy import deepcopy
 from logging import Logger
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import pytest
-from CloudFlare import CloudFlare
-from CloudFlare.exceptions import CloudFlareAPIError
 
 from dns_synchub.events.types import Event
-from dns_synchub.mappers.cloudflare import CloudFlareMapper
 from dns_synchub.pollers import PollerData
 from dns_synchub.pollers.types import PollerSourceType
 from dns_synchub.settings import Settings
 from dns_synchub.settings.types import Domains
+
+try:
+    from CloudFlare import CloudFlare
+    from CloudFlare.exceptions import CloudFlareAPIError
+except ImportError:
+    pytest.skip('CloudFlare API not found')
+
+if TYPE_CHECKING:
+    from packages.cloudflare.src.dns_synchub_cloudflare import CloudFlareDNSProvider
+else:
+    dns_synchub_cloudflare = pytest.importorskip('dns_synchub_cloudflare')
+    CloudFlareDNSProvider = dns_synchub_cloudflare.CloudFlareDNSProvider
 
 
 @pytest.fixture
@@ -104,7 +115,7 @@ def mock_cf_client() -> list[dict[str, Any]]:
 
 
 def test_init(mock_logger: MagicMock, settings: Settings) -> None:
-    mapper = CloudFlareMapper(mock_logger, settings=settings)
+    mapper = CloudFlareDNSProvider(mock_logger, settings=settings)
     assert mapper.dry_run == settings.dry_run
     assert mapper.rc_type == settings.rc_type
     assert mapper.refresh_entries == settings.refresh_entries
@@ -118,14 +129,14 @@ def test_init(mock_logger: MagicMock, settings: Settings) -> None:
 
 def test_init_with_client(mock_logger: MagicMock, settings: Settings) -> None:
     client = CloudFlare(token='token')
-    mapper = CloudFlareMapper(mock_logger, settings=settings, client=client)
+    mapper = CloudFlareDNSProvider(mock_logger, settings=settings, client=client)
     assert mapper._client == client
     mock_logger.debug.assert_not_called()
 
 
 @pytest.mark.asyncio
 async def test_call(mock_logger: MagicMock, settings: Settings, mock_cf_client: MagicMock) -> None:
-    mapper = CloudFlareMapper(mock_logger, settings=settings, client=mock_cf_client)
+    mapper = CloudFlareDNSProvider(mock_logger, settings=settings, client=mock_cf_client)
     events = PollerData[PollerSourceType](['subdomain.example.ltd'], 'manual')
     with patch.object(mapper, 'sync', new_callable=AsyncMock) as mock_sync:
         await mapper(Event[PollerData[PollerSourceType]](events))
@@ -138,7 +149,7 @@ async def test_get_records(
 ) -> None:
     zone_id, name = ('zone_id', 'example.ltd')
 
-    mapper = CloudFlareMapper(mock_logger, settings=settings, client=mock_cf_client)
+    mapper = CloudFlareDNSProvider(mock_logger, settings=settings, client=mock_cf_client)
     zones = await mapper.get_records(zone_id, name=name)
     mock_cf_client.zones.dns_records.get.assert_called_with(zone_id, params={'name': name})
     assert len(zones) == 4
@@ -148,7 +159,7 @@ async def test_get_records(
 async def test_post_record(
     mock_logger: MagicMock, settings: Settings, mock_cf_client: MagicMock
 ) -> None:
-    mapper = CloudFlareMapper(mock_logger, settings=settings, client=mock_cf_client)
+    mapper = CloudFlareDNSProvider(mock_logger, settings=settings, client=mock_cf_client)
     zone_id, zone = 'zone_id', {'type': 'A', 'name': 'example.ltd', 'content': '1.2.3.4'}
 
     # Dry run
@@ -172,7 +183,7 @@ async def test_post_record(
 async def test_put_record(
     mock_logger: MagicMock, settings: Settings, mock_cf_client: MagicMock
 ) -> None:
-    mapper = CloudFlareMapper(mock_logger, settings=settings, client=mock_cf_client)
+    mapper = CloudFlareDNSProvider(mock_logger, settings=settings, client=mock_cf_client)
     zone_id, record_id = 'zone_id', 'record_id'
     zone = {'type': 'A', 'name': 'example.ltd', 'content': '1.2.3.4'}
 
@@ -191,7 +202,7 @@ async def test_put_record(
 async def test_sync_with_target_domain(
     mock_logger: MagicMock, settings: Settings, mock_cf_client: MagicMock
 ) -> None:
-    mapper = CloudFlareMapper(mock_logger, settings=settings, client=mock_cf_client)
+    mapper = CloudFlareDNSProvider(mock_logger, settings=settings, client=mock_cf_client)
     host = settings.domains[0].target_domain
     assert isinstance(host, str)
 
@@ -204,7 +215,7 @@ async def test_sync_with_target_domain(
 async def test_sync_with_non_subdomain(
     mock_logger: MagicMock, settings: Settings, mock_cf_client: MagicMock
 ) -> None:
-    mapper = CloudFlareMapper(mock_logger, settings=settings, client=mock_cf_client)
+    mapper = CloudFlareDNSProvider(mock_logger, settings=settings, client=mock_cf_client)
     host = 'nonexistent.example.ltd'
 
     result = await mapper.sync(PollerData[PollerSourceType]([host], 'manual'))
@@ -217,7 +228,7 @@ async def test_sync_with_excluded_domain(
     mock_logger: MagicMock, settings: Settings, mock_cf_client: MagicMock
 ) -> None:
     settings.domains[0].excluded_sub_domains = ['excluded']
-    mapper = CloudFlareMapper(mock_logger, settings=settings, client=mock_cf_client)
+    mapper = CloudFlareDNSProvider(mock_logger, settings=settings, client=mock_cf_client)
     host = f'excluded.{settings.domains[0].name}'
 
     result = await mapper.sync(PollerData[PollerSourceType]([host], 'manual'))
@@ -229,7 +240,7 @@ async def test_sync_with_excluded_domain(
 async def test_sync_with_existing_record(
     mock_logger: MagicMock, settings: Settings, mock_cf_client: MagicMock
 ) -> None:
-    mapper = CloudFlareMapper(mock_logger, settings=settings, client=mock_cf_client)
+    mapper = CloudFlareDNSProvider(mock_logger, settings=settings, client=mock_cf_client)
     host = settings.domains[0].name
     mapper.refresh_entries = False
 
@@ -242,7 +253,7 @@ async def test_sync_with_existing_record(
 async def test_sync_with_record_creation(
     mock_logger: MagicMock, settings: Settings, mock_cf_client: MagicMock
 ) -> None:
-    mapper = CloudFlareMapper(mock_logger, settings=settings, client=mock_cf_client)
+    mapper = CloudFlareDNSProvider(mock_logger, settings=settings, client=mock_cf_client)
     host = 'newsubdomain.region1.example.ltd'
     mock_cf_client.zones.dns_records.get.return_value = []
 
@@ -261,7 +272,7 @@ async def test_sync_with_record_creation(
 async def test_sync_with_record_update(
     mock_logger: MagicMock, settings: Settings, mock_cf_client: MagicMock
 ) -> None:
-    mapper = CloudFlareMapper(mock_logger, settings=settings, client=mock_cf_client)
+    mapper = CloudFlareDNSProvider(mock_logger, settings=settings, client=mock_cf_client)
     host = f'subdomain{settings.domains[0].zone_id}.{settings.domains[0].name}'
     mapper.refresh_entries = True
 
@@ -280,7 +291,7 @@ async def test_sync_with_record_update(
 async def test_sync_with_cloudflare_api_error(
     mock_logger: MagicMock, settings: Settings, mock_cf_client: MagicMock
 ) -> None:
-    mapper = CloudFlareMapper(mock_logger, settings=settings, client=mock_cf_client)
+    mapper = CloudFlareDNSProvider(mock_logger, settings=settings, client=mock_cf_client)
     host = f'newsubdomain.{settings.domains[0].name}'
 
     mock_cf_client.zones.dns_records.post.side_effect = CloudFlareAPIError(1000, 'API Error')

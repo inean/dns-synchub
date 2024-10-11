@@ -1,0 +1,35 @@
+[project]
+  name = "dns-synchub-cloudflare"
+  version = "0.1.0"
+  description = "Cloudflare Mapper for DNS Synchub"
+  readme = "README.md"
+  authors = [
+    { name = "Carlos Martín", email = "inean.es@gmail.com" },
+  ]
+  requires-python = ">=3.11"
+  dependencies = [
+    "dns-synchub",
+    "telemetry",
+    # External dependencies
+    "cloudflare < 2.20",
+    "tenacity>=8.0.1",
+  ]
+
+[build-system]
+  requires = [
+    "hatchling",
+  ]
+  build-backend = "hatchling.build"
+
+[project.entry-points.'dns_synchub.mappers']
+  cloudflare = 'dns_synchub_cloudflare:CloudFlareDNSProvider'
+
+[tool.uv.workspace]
+  members = [
+    "../*",
+    "../..",
+  ]
+
+[tool.uv.sources]
+  dns-synchub = { workspace = true }
+  telemetry   = { workspace = true }

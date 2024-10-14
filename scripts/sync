@@ -1,0 +1,125 @@
+# /// script
+# requires-python = ">=3.11"
+# dependencies = []
+# ///
+
+import argparse
+import os
+import subprocess
+import tomllib
+from typing import Any, cast
+
+
+class Args(argparse.Namespace):
+    dev: bool
+    only_dev: bool
+    all_extras: bool
+    extra: list[str]
+
+
+def parse_args() -> Args:
+    parser = argparse.ArgumentParser(description='Sync packages using uv sync.')
+
+    # Mutually exclusive group for dev options
+    dev_group = parser.add_mutually_exclusive_group()
+    dev_group.add_argument('--dev', action='store_true', help='Install also dev dependencies.')
+    dev_group.add_argument('--only-dev', action='store_true', help='Install only dev packages.')
+
+    # Mutually exclusive group for extras options
+    extras_group = parser.add_mutually_exclusive_group()
+    extras_group.add_argument('--all-extras', action='store_true', help='Install all extras.')
+    extras_group.add_argument('--extra', action='append', help='Install specific extras.')
+
+    return cast(Args, parser.parse_args())
+
+
+def find_pyproject_toml():
+    current_dir = os.getcwd()
+    while True:
+        pyproject_path = os.path.join(current_dir, 'pyproject.toml')
+        if os.path.isfile(pyproject_path):
+            return pyproject_path
+        parent_dir = os.path.dirname(current_dir)
+        if parent_dir == current_dir:
+            # Root directory reached, pyproject.toml not found
+            raise FileNotFoundError('pyproject.toml not found in any parent directories.')
+        current_dir = parent_dir
+
+
+def load_sources(pyproject_path: str) -> list[str]:
+    """Load workspace sources from the pyproject.toml file."""
+    with open(pyproject_path, 'rb') as f:
+        data = tomllib.load(f)
+
+    # Extract the 'members' array from 'tool.uv.sources' section
+    sources: list[str] = []
+    for package, package_data in cast(dict[str, Any], data['tool']['uv']['sources']).items():
+        if cast(dict[str, Any], package_data).get('workspace', False):
+            sources.append(package)
+    return sources
+
+
+def run_uv_sync(
+    dev: bool, only_dev: bool, extras: list[str], all_extras: bool, env: dict[str, str]
+) -> None:
+    """Run the uv sync command."""
+    command = ['uv', 'sync']
+    # Dev group options
+    if dev:
+        command.append('--dev')
+    elif only_dev:
+        command.append('--only-dev')
+    # Extras group options
+    if extras:
+        for extra in extras:
+            command.extend(['--extra', extra])
+    elif all_extras:
+        command.append('--all-extras')
+
+    print(f"Running command: {' '.join(command)}")
+    subprocess.run(command, env=env)
+
+
+def run_uv_sync_sources(sources: list[str], dev: bool, only_dev: bool, env: dict[str, str]) -> None:
+    """Run the uv sync command for each source package."""
+    for package in sources:
+        command = ['uv', 'sync']
+        if dev:
+            command.append('--dev')
+        if only_dev:
+            command.append('--only-dev')
+        command.extend(['--inexact', '--package', package])
+        print(f"Running command: {' '.join(command)}")
+        subprocess.run(command, env=env)
+
+
+def main():
+    # Set up argument parser
+    args = parse_args()
+
+    try:
+        # Find pyproject.toml in current or parent directories
+        pyproject_file = find_pyproject_toml()
+    except FileNotFoundError as e:
+        print(e)
+        return
+
+    # Get the directory containing pyproject.toml
+    # Change directory to the base directory
+    os.chdir(os.path.dirname(pyproject_file))
+
+    # Load the pyproject.toml file
+    # Extract the 'members' array from 'tool.uv.sources' section
+    sources = load_sources('pyproject.toml')
+
+    # Copy the current environment and unset VIRTUAL_ENV
+    env = os.environ.copy()
+    env.pop('VIRTUAL_ENV', None)
+
+    # For each member in the array
+    run_uv_sync(args.dev, args.only_dev, args.extra, args.all_extras, env)
+    run_uv_sync_sources(sources, args.dev, args.only_dev, env)
+
+
+if __name__ == '__main__':
+    main()

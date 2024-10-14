@@ -68,7 +68,7 @@
     },
 
     // Update container
-    "updateContentCommand": "uv sync --dev --all-extras",
+    "updateContentCommand": "uv run -s scripts/sync --dev --all-extras",
 
     // Use 'postCreateCommand' to run commands after the container is created.
     "postCreateCommand": "uv run pre-commit install",

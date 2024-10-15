@@ -1,4 +1,4 @@
-from .docker import DockerPoller
+from dns_synchub_docker.docker import DockerPoller
 
 __all__ = ['DockerPoller']
 

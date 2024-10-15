@@ -326,12 +326,14 @@ source = { editable = "packages/cli" }
 dependencies = [
     { name = "dns-synchub" },
     { name = "opentelemetry-distro" },
+    { name = "rich-click" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "dns-synchub", editable = "." },
     { name = "opentelemetry-distro", specifier = "==0.48b0" },
+    { name = "rich-click", specifier = ">=1.8.3" },
 ]
 
 [[package]]

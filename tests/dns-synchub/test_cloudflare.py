@@ -20,7 +20,7 @@ except ImportError:
     pytest.skip('CloudFlare API not found')
 
 if TYPE_CHECKING:
-    from packages.cloudflare.src.dns_synchub_cloudflare import CloudFlareDNSProvider
+    from dns_synchub_cloudflare import CloudFlareDNSProvider
 else:
     dns_synchub_cloudflare = pytest.importorskip('dns_synchub_cloudflare')
     CloudFlareDNSProvider = dns_synchub_cloudflare.CloudFlareDNSProvider

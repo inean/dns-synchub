@@ -2,7 +2,7 @@ import logging
 import re
 from typing import Literal, Self
 
-from pydantic import AliasChoices, Field, model_validator
+from pydantic import AliasChoices, Field, ValidationError, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from dns_synchub.settings.types import (
@@ -113,3 +113,9 @@ class Settings(BaseSettings):
 
     def __hash__(self) -> int:
         return id(self)
+
+
+__all__ = [
+    'Settings',
+    'ValidationError',
+]

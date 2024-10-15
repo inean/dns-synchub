@@ -1,4 +1,4 @@
-from .traefik import TraefikPoller
+from dns_synchub_traefik.traefik import TraefikPoller
 
 __all__ = ['TraefikPoller']
 

@@ -129,7 +129,10 @@
 [tool.coverage.run]
   branch = true
   context = '${CONTEXT}'
-  source = ['dns_synchub']
+  source = [
+    'dns_synchub',
+    'packages',
+  ]
 
 [tool.coverage.report]
   exclude_lines = [
@@ -142,7 +145,10 @@
   precision = 2
 
 [tool.coverage.paths]
-  source = ['src/dns_synchub/']
+  source = [
+    'src/dns_synchub/',
+    'packages/*/src/',
+  ]
 
 ##
 # Linter Configuration (MyPy)
@@ -151,12 +157,14 @@
   files = [
     "src/",
     "tests/",
+    "types/",
+    "packages/",
   ]
   strict = true
   # Cache directory for MyPy
   cache_dir = ".cache/mypy"
   # Third party type stubs
-  mypy_path = "types:src"
+  mypy_path = "types"
   # Don't prevents discovery of packages that don’t have an __init__.py
   namespace_packages = true
 
@@ -164,6 +172,20 @@
     module = ['telemetry']
     # Silent unused ignore errors because some are needed with pylance strict mode
     warn_unused_ignores = false
+
+###
+# Linter Configuration (Pyright)
+##
+[tool.pyright]
+  include = [
+    "src",
+    "packages",
+    "tests",
+    "types",
+    "scripts",
+  ]
+  stubPath = "types"
+  typeCheckingMode = "strict"
 
 ##
 # Formatter Configuration (Ruff)

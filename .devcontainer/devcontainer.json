@@ -37,9 +37,6 @@
                 // Python Container settings
                 "python.venvPath": "${containerWorkspaceFolder}/.venv",
                 "python.defaultInterpreterPath": "${containerWorkspaceFolder}/.venv/bin/python",
-                "python.analysis.extraPaths": [
-                    "${containerWorkspaceFolder}/types"
-                ],
                 //Extensions
                 "terminal.integrated.defaultProfile.linux": "zsh",
                 "terminal.integrated.profiles.linux": {

@@ -7,6 +7,7 @@
   dependencies = [
     "dns-synchub",
     "opentelemetry-distro==0.48b0",
+    "rich-click>=1.8.3",
   ]
   description = "Command line for dns-synchub"
   license = "MIT"
@@ -16,7 +17,7 @@
   version = "0.1a0"
 
   [project.scripts]
-    dns-synchub = "dns_synchub_cli:main"
+    dns-synchub = "dns_synchub_cli.cli:cli"
 
 [tool.uv]
   dev-dependencies = []

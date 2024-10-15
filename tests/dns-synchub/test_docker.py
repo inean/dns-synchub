@@ -23,7 +23,7 @@ except ImportError:
     pass
 
 if TYPE_CHECKING:
-    from packages.docker.src.dns_synchub_docker import DockerPoller
+    from dns_synchub_docker import DockerPoller
 else:
     dns_synchub_docker = pytest.importorskip('dns_synchub_docker')
     DockerPoller = dns_synchub_docker.DockerPoller

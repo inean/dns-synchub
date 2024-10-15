@@ -8,6 +8,7 @@ resolution-markers = [
 [manifest]
 members = [
     "dns-synchub",
+    "dns-synchub-cli",
     "dns-synchub-cloudflare",
     "dns-synchub-docker",
     "dns-synchub-traefik",
@@ -243,18 +244,21 @@ wheels = [
 
 [[package]]
 name = "dns-synchub"
-version = "0.1.0"
-source = { virtual = "." }
+version = "0.1a0"
+source = { editable = "." }
 dependencies = [
-    { name = "opentelemetry-distro" },
+    { name = "opentelemetry-api" },
+    { name = "opentelemetry-sdk" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
-    { name = "python-dotenv" },
     { name = "telemetry" },
     { name = "typing-extensions" },
 ]
 
 [package.optional-dependencies]
+cli = [
+    { name = "dns-synchub-cli" },
+]
 cloudflare = [
     { name = "dns-synchub-cloudflare" },
 ]
@@ -286,14 +290,15 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "dns-synchub-cli", marker = "extra == 'cli'", editable = "packages/cli" },
     { name = "dns-synchub-cloudflare", marker = "extra == 'cloudflare'", editable = "packages/cloudflare" },
     { name = "dns-synchub-docker", marker = "extra == 'docker'", editable = "packages/docker" },
     { name = "dns-synchub-traefik", marker = "extra == 'traefik'", editable = "packages/traefik" },
-    { name = "opentelemetry-distro", specifier = "==0.48b0" },
+    { name = "opentelemetry-api", specifier = ">=1.27.0" },
     { name = "opentelemetry-exporter-otlp-proto-grpc", marker = "extra == 'otlp'", specifier = ">=0.49b0" },
+    { name = "opentelemetry-sdk", specifier = ">=1.27.0" },
     { name = "pydantic", specifier = ">=2.0" },
     { name = "pydantic-settings", git = "https://github.com/inean/pydantic-settings.git?rev=2.3" },
-    { name = "python-dotenv", specifier = ">=1.0.1" },
     { name = "telemetry", editable = "packages/telemetry" },
     { name = "typing-extensions", specifier = ">=4.5.0" },
 ]
@@ -315,8 +320,23 @@ dev = [
 ]
 
 [[package]]
+name = "dns-synchub-cli"
+version = "0.1a0"
+source = { editable = "packages/cli" }
+dependencies = [
+    { name = "dns-synchub" },
+    { name = "opentelemetry-distro" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "dns-synchub", editable = "." },
+    { name = "opentelemetry-distro", specifier = "==0.48b0" },
+]
+
+[[package]]
 name = "dns-synchub-cloudflare"
-version = "0.1.0"
+version = "0.1a0"
 source = { editable = "packages/cloudflare" }
 dependencies = [
     { name = "cloudflare" },
@@ -328,14 +348,14 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "cloudflare", specifier = "<2.20" },
-    { name = "dns-synchub", virtual = "." },
+    { name = "dns-synchub", editable = "." },
     { name = "telemetry", editable = "packages/telemetry" },
     { name = "tenacity", specifier = ">=8.0.1" },
 ]
 
 [[package]]
 name = "dns-synchub-docker"
-version = "0.1.0"
+version = "0.1a0"
 source = { editable = "packages/docker" }
 dependencies = [
     { name = "dns-synchub" },
@@ -351,7 +371,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "dns-synchub", virtual = "." },
+    { name = "dns-synchub", editable = "." },
     { name = "docker", specifier = ">=7.1.0" },
     { name = "telemetry", editable = "packages/telemetry" },
     { name = "tenacity", specifier = ">=8.0.1" },
@@ -362,7 +382,7 @@ dev = [{ name = "types-docker", specifier = ">=7.1.0" }]
 
 [[package]]
 name = "dns-synchub-traefik"
-version = "0.1.0"
+version = "0.1a0"
 source = { editable = "packages/traefik" }
 dependencies = [
     { name = "dns-synchub" },
@@ -378,7 +398,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "dns-synchub", virtual = "." },
+    { name = "dns-synchub", editable = "." },
     { name = "requests", specifier = ">=2.26.0" },
     { name = "telemetry", editable = "packages/telemetry" },
     { name = "tenacity", specifier = ">=8.0.1" },
@@ -1067,7 +1087,7 @@ wheels = [
 
 [[package]]
 name = "telemetry"
-version = "0.1.0"
+version = "0.1a0"
 source = { editable = "packages/telemetry" }
 dependencies = [
     { name = "opentelemetry-api" },

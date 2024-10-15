@@ -49,7 +49,7 @@ def parse_args() -> Args:
     return Args(**vars(args))
 
 
-async def main(log: Logger, *, settings: Settings) -> None:
+async def run(log: Logger, *, settings: Settings) -> None:
     # Add Cloudflarte mapper
     try:
         dns = Mapper.backends['cloudflare']

@@ -91,17 +91,20 @@ repos:
         types: [toml]
         args:
           - --option
+          - array_auto_collapse=false
+          - --option
           - array_auto_expand=true
+          - --option
+          - allowed_blank_lines=1
           - --option
           - array_trailing_comma=true
           - --option
-          - align_entries=true
-          - --option
-          - column_width=0
-          - --option
           - indent_entries=true
           - --option
-          - reorder_arrays=true
+          - indent_tables=true
+          - --option
+          - reorder_keys=true
+
 
       - id: mypy
         name: mypy static type checker

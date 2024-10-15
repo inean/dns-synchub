@@ -1,6 +1,7 @@
 # python generated files
 .cache/*
 !**/.gitkeep
+**/*.egg-info
 
 # Ignore all uv.lock files except those in the root directory
 **/uv.lock

@@ -2,15 +2,15 @@
 
 import asyncio
 import logging
-import pathlib
 import re
 import sys
 
 from pydantic import ValidationError
 
-import dns_synchub.cli as cli
 import dns_synchub.logger as logger
 import dns_synchub.settings as settings
+
+from . import cli
 
 
 def report_state(settings: settings.Settings) -> logging.Logger:
@@ -60,7 +60,7 @@ def main() -> int:
     # Set up logging and dump runtime settings
     log = report_state(options)
     try:
-        asyncio.run(cli.main(log, settings=options))
+        asyncio.run(cli.run(log, settings=options))
     except KeyboardInterrupt:
         # asyncio.run will cancel any task pending when the main function exits
         log.info('Cancel by user.')
@@ -68,14 +68,3 @@ def main() -> int:
 
     # Exit grqacefully
     return 0
-
-
-if __name__ == '__main__':
-    # If the script is run as a module, use the directory name as the script name
-    script_name = pathlib.Path(sys.argv[0]).stem
-    if sys.argv[0] == __file__:
-        script_path = pathlib.Path(sys.argv[0])
-        script_name = script_path.parent.name.replace('_', '-')
-    # Set the script name to the first argument and invoke the main function
-    sys.argv[0] = script_name
-    sys.exit(main())

@@ -6,25 +6,20 @@
   authors = [{ name = "Carlos Martín", email = "inean.es@gmail.com" }]
   dependencies = [
     "dns-synchub",
-    "telemetry",
-    # External dependencies
-    "docker>=7.1.0",
-    "tenacity>=8.0.1",
+    "opentelemetry-distro==0.48b0",
   ]
-  description = "Docker poller (sync) for DNS Synchub"
+  description = "Command line for dns-synchub"
   license = "MIT"
-  name = "dns-synchub-docker"
+  name = "dns-synchub-cli"
   readme = "README.md"
   requires-python = ">=3.11"
   version = "0.1a0"
 
-  [project.entry-points.'dns_synchub.pollers']
-    docker = 'dns_synchub_docker:DockerPoller'
+  [project.scripts]
+    dns-synchub = "dns_synchub_cli:main"
 
 [tool.uv]
-  dev-dependencies = [
-    "types-docker>=7.1.0",
-  ]
+  dev-dependencies = []
 
   [tool.uv.workspace]
     members = [
@@ -34,4 +29,3 @@
 
   [tool.uv.sources]
     dns-synchub = { workspace = true }
-    telemetry = { workspace = true }

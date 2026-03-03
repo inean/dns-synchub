@@ -154,7 +154,7 @@ class BasePoller(ABC, PollerProtocol[T], Generic[T]):
 class PollerEventEmitter(EventEmitter[PollerData[PollerSourceType]]):
     def __init__(self, logger: Logger, *, poller: 'Poller[Any]'):
         self.poller = WeakRef(poller)
-        super().__init__(logger, origin=poller.source)
+        super().__init__(logger, origin=poller.source, queue_maxsize=poller.event_queue_size)
 
     # Event related methods
     @override
@@ -172,6 +172,7 @@ class Poller(BasePoller[PollerSourceType], Generic[T]):
     def __init__(self, logger: Logger, *, settings: Settings, client: T | None = None):
         # init client
         self._client: T | None = client
+        self.event_queue_size = settings.event_queue_size
 
         self.events = PollerEventEmitter(logger, poller=self)
 

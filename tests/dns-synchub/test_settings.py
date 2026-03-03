@@ -45,3 +45,21 @@ def test_traefik_poll_requires_valid_url() -> None:
             enable_traefik_poll=True,
             traefik_poll_url='bad-url',
         )
+
+
+def test_requires_at_least_one_poller_enabled() -> None:
+    with pytest.raises(ValueError, match='At least one poller must be enabled'):
+        Settings(
+            cf_token='token',
+            dry_run=True,
+            enable_docker_poll=False,
+            enable_traefik_poll=False,
+        )
+
+
+def test_validates_queue_size_and_mapper_concurrency() -> None:
+    with pytest.raises(ValueError, match='event_queue_size must be >= 1'):
+        Settings(cf_token='token', dry_run=True, event_queue_size=0)
+
+    with pytest.raises(ValueError, match='cf_max_concurrency must be >= 1'):
+        Settings(cf_token='token', dry_run=True, cf_max_concurrency=0)

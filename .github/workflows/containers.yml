@@ -48,7 +48,8 @@ jobs:
 
       - name: Test Image
         run: |
-          docker run --rm ${{ github.repository }}
+          docker run --rm ${{ github.repository }} --version
+          docker run --rm ${{ github.repository }} --help
 
   lint-devcontainer:
     runs-on: ubuntu-latest

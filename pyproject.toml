@@ -144,6 +144,7 @@
     'raise NotImplemented',
     'raise NotImplementedError',
   ]
+  fail_under = 80
   precision = 2
 
 [tool.coverage.paths]

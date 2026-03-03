@@ -26,8 +26,8 @@ from dns_synchub.utils._once import Once
 
 
 class _TelemetryTracer:
-    _instance: Optional['_TelemetryTracer'] = None
-    _set_once = Once()
+    instance: Optional['_TelemetryTracer'] = None
+    set_once = Once()
 
     def __init__(self, service_name: str | None = None, exporters: set[str] | None = None):
         if service_name is None:
@@ -91,15 +91,16 @@ def telemetry_tracer(
     service_name: str | None = None, exporters: set[str] | None = None
 ) -> _TelemetryTracer:
     def set_tp() -> None:
-        _TelemetryTracer._instance = _TelemetryTracer(service_name, exporters)
-        trace.set_tracer_provider(_TelemetryTracer._instance.tracer_provider)
+        _TelemetryTracer.instance = _TelemetryTracer(service_name, exporters)
+        assert _TelemetryTracer.instance is not None
+        trace.set_tracer_provider(_TelemetryTracer.instance.tracer_provider)
 
-    executed = _TelemetryTracer._set_once.do_once(set_tp)
+    executed = _TelemetryTracer.set_once.do_once(set_tp)
     if service_name is not None and executed is False:
         raise RuntimeError('Overriding of current TracerProvider is not allowed')
 
-    assert _TelemetryTracer._instance is not None
-    return _TelemetryTracer._instance
+    assert _TelemetryTracer.instance is not None
+    return _TelemetryTracer.instance
 
 
 def get_tracer(

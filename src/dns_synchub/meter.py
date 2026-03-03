@@ -1,7 +1,6 @@
 import importlib
 import os
 from sys import stderr
-from typing import Optional
 
 from opentelemetry import metrics
 from opentelemetry.metrics import Meter
@@ -21,8 +20,8 @@ from dns_synchub.utils._once import Once
 
 
 class _TelemetryMeter:
-    _instance: Optional['_TelemetryMeter'] = None
-    _set_once = Once()
+    instance: '_TelemetryMeter | None' = None
+    set_once = Once()
 
     def __init__(self, service_name: str | None = None, exporters: set[str] | None = None):
         if service_name is None:
@@ -44,7 +43,7 @@ class _TelemetryMeter:
 
     def _init_meter(self) -> MeterProvider:
         # Define metric readers
-        metric_readers = []
+        metric_readers: list[PeriodicExportingMetricReader] = []
 
         # Console metrics exporter
         if Exporters.CONSOLE in self.exporters:
@@ -65,9 +64,8 @@ class _TelemetryMeter:
                     f'from "{Env.OTEL_METRICS_EXPORTER}"'
                 ) from err
 
-            periodic_reader = PeriodicExportingMetricReader(
-                otlp_exporter.OTLPMetricExporter(insecure=True)
-            )
+            otlp_metric_exporter = getattr(otlp_exporter, 'OTLPMetricExporter')
+            periodic_reader = PeriodicExportingMetricReader(otlp_metric_exporter(insecure=True))
             metric_readers.append(periodic_reader)
 
         return MeterProvider(
@@ -88,12 +86,13 @@ def telemetry_meter(
     service_name: str | None = None, exporters: set[str] | None = None
 ) -> _TelemetryMeter:
     def set_tm() -> None:
-        _TelemetryMeter._instance = _TelemetryMeter(service_name, exporters)
-        metrics.set_meter_provider(_TelemetryMeter._instance.meter_provider)
+        _TelemetryMeter.instance = _TelemetryMeter(service_name, exporters)
+        assert _TelemetryMeter.instance is not None
+        metrics.set_meter_provider(_TelemetryMeter.instance.meter_provider)
 
-    executed = _TelemetryMeter._set_once.do_once(set_tm)
+    executed = _TelemetryMeter.set_once.do_once(set_tm)
     if service_name is not None and executed is False:
         raise RuntimeError('Overriding of current TracerProvider is not allowed')
 
-    assert _TelemetryMeter._instance is not None
-    return _TelemetryMeter._instance
+    assert _TelemetryMeter.instance is not None
+    return _TelemetryMeter.instance

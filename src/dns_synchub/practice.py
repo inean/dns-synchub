@@ -4,7 +4,7 @@ import string
 import time
 from functools import lru_cache
 
-from dns_synchub.logger import _telemetry_logger
+from dns_synchub.logger import telemetry_logger
 from dns_synchub.meter import telemetry_meter
 from dns_synchub.telemetry_constants import (
     TelementryExporters as Exporters,
@@ -33,7 +33,7 @@ def practice(how_long: float) -> bool:
     practice_logger = logging.getLogger('yoda.practice')
     practice_logger.addHandler(logging.StreamHandler())
     practice_logger.addHandler(
-        _telemetry_logger(
+        telemetry_logger(
             service_name,
             exporters={
                 Exporters.OTLP,

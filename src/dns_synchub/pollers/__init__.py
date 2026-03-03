@@ -14,11 +14,10 @@ from typing import (
     TypedDict,
     TypeVar,
     final,
+    override,
     runtime_checkable,
 )
 from weakref import ref as WeakRef
-
-from typing_extensions import override
 
 from dns_synchub.events import EventEmitter
 from dns_synchub.events.types import EventSubscriberType

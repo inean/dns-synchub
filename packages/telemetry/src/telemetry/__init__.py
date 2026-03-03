@@ -11,13 +11,13 @@ from typing import (
     TypeVar,
     cast,
     overload,
+    override,
 )
 
 from opentelemetry import trace
 from opentelemetry.semconv.trace import SpanAttributes
 from opentelemetry.trace import Tracer
 from opentelemetry.util.types import AttributeValue
-from typing_extensions import override
 
 R = TypeVar('R', bound=Any)
 AR = TypeVar('AR', bound=Awaitable[Any])

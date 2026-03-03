@@ -16,10 +16,9 @@ from dns_synchub.settings import Settings
 
 try:
     import docker
-    import docker.client
     import docker.errors
 except ImportError:
-    pytest.skip('Docker SDK not installed')
+    pytest.skip('Docker SDK not installed', allow_module_level=True)
     pass
 
 if TYPE_CHECKING:
@@ -174,9 +173,16 @@ async def test_fetch_filter_by_value(docker_poller: DockerPoller) -> None:
 
 
 @pytest.mark.asyncio
+async def test_fetch_raises_on_retry_exhausted(docker_poller: DockerPoller) -> None:
+    docker_poller.config['wait'] = 0
+    with patch('asyncio.to_thread', side_effect=ConnectionError('boom')):
+        with pytest.raises(ConnectionError, match='Could not fetch containers'):
+            await docker_poller.fetch()
+
+
+@pytest.mark.asyncio
 async def test_run(docker_poller: DockerPoller) -> None:
-    callback_mock = MagicMock(spec=EventSubscriber)
-    callback_mock.__call__ = AsyncMock(return_value=None)  # type: ignore
+    callback_mock = AsyncMock(spec=EventSubscriber)
 
     await docker_poller.events.subscribe(callback_mock)
     assert 0 == callback_mock.call_count
@@ -198,18 +204,18 @@ async def test_run(docker_poller: DockerPoller) -> None:
         + [call(Event(PollerData([f'subdomain{i}.example.ltd' for i in range(1, 5)], 'docker')))]
         + [call(Event(PollerData([f'subdomain{i}.example.ltd'], 'docker'))) for i in range(1, 5)]
     )
-    assert callback_mock.__call__.call_count == len(expected_calls)
-    callback_mock.__call__.assert_has_calls(expected_calls, any_order=False)
+    assert callback_mock.call_count == len(expected_calls)
+    callback_mock.assert_has_calls(expected_calls, any_order=False)
 
     # Check the rest of the runs will not perform a fetch
     expected_calls.pop(0)
-    callback_mock.__call__.reset_mock()
+    callback_mock.reset_mock()
     docker_client_events.return_value.reset()
     loop = asyncio.get_event_loop()
     loop.call_later(0.1, lambda: asyncio.create_task(docker_poller.stop()))
     await docker_poller.start()
-    assert callback_mock.__call__.call_count == len(expected_calls)
-    callback_mock.__call__.assert_has_calls(expected_calls, any_order=False)
+    assert callback_mock.call_count == len(expected_calls)
+    callback_mock.assert_has_calls(expected_calls, any_order=False)
 
 
 @pytest.mark.asyncio

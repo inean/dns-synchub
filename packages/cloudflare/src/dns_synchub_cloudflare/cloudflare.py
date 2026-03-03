@@ -4,7 +4,7 @@ import time
 from collections.abc import Awaitable, Callable
 from functools import partial, wraps
 from logging import Logger
-from typing import Any, cast
+from typing import Any, cast, override
 
 from CloudFlare import (
     CloudFlare,
@@ -18,7 +18,6 @@ from tenacity import (
     stop_after_attempt,
     wait_exponential,
 )
-from typing_extensions import override
 
 from dns_synchub.events.types import Event
 from dns_synchub.mappers import Mapper
@@ -108,7 +107,8 @@ class CloudFlareDNSProvider(Mapper[PollerData[PollerSourceType], CloudFlare]):
             },
         ) as span:
             while True:
-                if backoff := (self.lastcall + self.sync_sec) - time.time() <= 0:
+                backoff = (self.lastcall + self.sync_sec) - time.time()
+                if backoff <= 0:
                     break
                 span.add_event('Sleeping before next sync', {'backoff': backoff})
                 await asyncio.sleep(backoff)

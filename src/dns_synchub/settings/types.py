@@ -53,7 +53,7 @@ TTLType = Annotated[int | str, BeforeValidator(validate_ttl)]
 class Domains(BaseModel):
     name: str
     zone_id: str
-    proxied: bool = True
+    proxied: bool | None = None
     ttl: TTLType | None = None
     target_domain: str | None = None
     comment: str | None = None

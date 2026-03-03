@@ -7,9 +7,6 @@
     # telemetry
     "opentelemetry-api>=1.27.0",
     "opentelemetry-sdk>=1.27.0",
-    "telemetry>=0.1.0",
-    # utilities
-    "typing-extensions>=4.5.0",
   ]
   description = """
   This will build a Docker image to automatically update CloudFlare DNS
@@ -17,7 +14,7 @@
   """
   name = "dns-synchub"
   readme = "README.md"
-  requires-python = ">= 3.11"
+  requires-python = ">= 3.13"
   version = "0.1a0"
 
   [project.optional-dependencies]
@@ -44,6 +41,7 @@
     "deptry>=0.20.0",
     "mypy>=1.11.2",
     "pyupgrade>=3.16.0",
+    "pyright>=1.1.389",
     "ruff>=0.5.4",
     # test
     "pytest-asyncio>=0.23.8",
@@ -52,6 +50,8 @@
     "pytest-mock >=3.14.0",
     "pytest-pretty>=1.2.0",
     "pytest>=8.3.2",
+    "types-docker>=7.1.0",
+    "types-requests>=2.32.0",
   ]
   package = true
 

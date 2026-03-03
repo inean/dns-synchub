@@ -14,7 +14,6 @@ from dns_synchub.utils._helpers import getd
 
 from .types import (
     Event,
-    EventSubscriber,
     EventSubscriberDataType,
     EventSubscriberType,
 )
@@ -58,23 +57,20 @@ class EventEmitter(Generic[T_co]):
             span.add_event('Sleeping before invoking callback', {'sleep_time': sleep_time})
             await asyncio.sleep(sleep_time)
             # Get callback function
-            func = callback
-            if isinstance(callback, EventSubscriber):
-                func = callback.__call__
-            assert callable(func)
             # Get data from queue
             event: Event[T_co] = await queue.get()
             # Invoke
             span.add_event('Invoking callback function', {'callback': repr(callback)})
-            assert asyncio.iscoroutinefunction(func)
-            await func(event)
+            await callback(event)
             # Update last called time
             last_called = time.time()
 
         return callback, (queue, backoff, last_called)
 
     async def emit(self, timeout: float | None = None) -> None:
-        tasks = []
+        tasks: list[
+            asyncio.Task[tuple[EventSubscriberType[T_co], EventSubscriberDataType[T_co]]]
+        ] = []
         with self.tracer.start_as_current_span(
             Spans.EVENTS_EMIT,
             attributes={
@@ -97,8 +93,9 @@ class EventEmitter(Generic[T_co]):
                 span.set_attribute(Attrs.TIMEOUT_REACHED, True)
                 self.logger.warning(f'{self.origin}: Emit timeout reached.')
                 # Cancel all tasks
-                [task.cancel() for task in tasks]
-                asyncio.gather(*tasks, return_exceptions=True)
+                for task in tasks:
+                    task.cancel()
+                await asyncio.gather(*tasks, return_exceptions=True)
 
     # Data related methods
     def set_data(self, data: T_co, *, callback: EventSubscriberType[T_co] | None = None) -> None:

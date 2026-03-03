@@ -90,7 +90,8 @@ class Settings(BaseSettings):
             dom.ttl = dom.ttl or self.default_ttl
             dom.target_domain = dom.target_domain or self.target_domain
             dom.rc_type = dom.rc_type or self.rc_type
-            dom.proxied = dom.proxied or self.proxied
+            if dom.proxied is None:
+                dom.proxied = self.proxied
         return self
 
     @model_validator(mode='after')

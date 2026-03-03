@@ -13,7 +13,7 @@
   license = "MIT"
   name = "dns-synchub-cli"
   readme = "README.md"
-  requires-python = ">=3.11"
+  requires-python = ">=3.13"
   version = "0.1a0"
 
   [project.scripts]
@@ -21,12 +21,6 @@
 
 [tool.uv]
   dev-dependencies = []
-
-  [tool.uv.workspace]
-    members = [
-      "../*",
-      "../..",
-    ]
 
   [tool.uv.sources]
     dns-synchub = { workspace = true }

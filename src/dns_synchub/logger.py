@@ -65,6 +65,10 @@ def _telemetry_logger(service_name: str, *, exporters: set[str] | None = None) -
     return LoggingHandler(level=logging.NOTSET, logger_provider=logger_provider)
 
 
+def telemetry_logger(service_name: str, *, exporters: set[str] | None = None) -> logging.Handler:
+    return _telemetry_logger(service_name, exporters=exporters)
+
+
 def _console_log_handler(console: str, *, formatter: logging.Formatter) -> logging.Handler:
     match console:
         case 'stdout':
@@ -105,7 +109,7 @@ def initialize_logger(logger: logging.Logger, *, settings: Settings) -> logging.
         logger.addHandler(handler)
 
     # Set up telemetry
-    handler = _telemetry_logger(settings.service_name)
+    handler = telemetry_logger(settings.service_name)
     if not isinstance(handler, logging.NullHandler):
         logger.addHandler(handler)
 

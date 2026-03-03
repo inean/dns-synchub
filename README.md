@@ -379,24 +379,31 @@ docker exec -it <container name> bash
 
 ### Telemetry
 
-We use [OpenTelemetry](https://opentelemetry.io/)  for logging and metrics to ensure comprehensive observability of our services. This enables performance monitoring, issue detection, and insights into application behavior. Telemetry is disabled by default.
+We use [OpenTelemetry](https://opentelemetry.io/) for logging, traces, and metrics to ensure comprehensive observability of our services. This enables performance monitoring, issue detection, and insights into application behavior. Telemetry exporters are disabled by default.
 
 #### Setup
 
 To configure [OpenTelemetry](https://opentelemetry.io/), follow these steps:
 
-1. **Set Environment Variables**:
+1. **Set Exporters**:
 
-   Ensure that the necessary environment variables are set for OpenTelemetry to function correctly:
+   Configure one or more exporters using OpenTelemetry environment variables:
 
    ```bash
-   export OTEL_EXPORTER_OTLP_ENDPOINT="your-otlp-endpoint"
-   export OTEL_RESOURCE_ATTRIBUTES="service.name=your-service-name"
+   export OTEL_LOGGER_EXPORTER="otlp"
+   export OTEL_TRACES_EXPORTER="otlp"
+   export OTEL_METRICS_EXPORTER="otlp"
    ```
 
-1. **Enable Telemetry**
+   Use `none` to disable an exporter and `console` for local debugging output.
 
-Telemetry is disabled by default. To enable it, pass the `--enable-telemetry` argument at the command line.
+1. **Set OTLP Endpoint (only when using `otlp`)**:
+
+   ```bash
+   export OTEL_EXPORTER_OTLP_ENDPOINT="http://otel-collector:4317"
+   ```
+
+Telemetry is environment-driven; there is no CLI flag required to enable it.
 
 ## Support
 

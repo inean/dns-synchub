@@ -1,11 +1,10 @@
 import asyncio
 import re
 from logging import Logger
-from typing import Any
+from typing import Any, override
 
 from requests import Response, Session
 from tenacity import AsyncRetrying, RetryError, stop_after_attempt, wait_exponential
-from typing_extensions import override
 
 from dns_synchub.pollers import Poller, PollerData
 from dns_synchub.pollers.types import PollerSourceType
@@ -50,6 +49,7 @@ class TraefikPoller(Poller[Session]):
             return False
         if 'Host' not in route['rule']:
             self.logger.debug(f"Traefik Router Name: {route['name']} - Missing Host")
+            return False
         # Route is valid and enabled
         return True
 
@@ -96,7 +96,7 @@ class TraefikPoller(Poller[Session]):
     async def fetch(self) -> PollerData[PollerSourceType]:
         stop = stop_after_attempt(self.config['stop'])
         wait = wait_exponential(multiplier=self.config['wait'], max=self.tout_sec)
-        rawdata = []
+        rawdata: list[dict[str, Any]] = []
         assert self._client
         try:
             async for attempt_ctx in AsyncRetrying(stop=stop, wait=wait):

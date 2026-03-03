@@ -115,7 +115,7 @@ repos:
 
       - id: pyupgrade
         name: Pyupgrade
-        entry: uv run pyupgrade --py311-plus
+        entry: uv run pyupgrade --py312-plus
         types: [python]
         language: system
 

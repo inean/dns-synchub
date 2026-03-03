@@ -17,7 +17,7 @@ try:
     from CloudFlare import CloudFlare
     from CloudFlare.exceptions import CloudFlareAPIError
 except ImportError:
-    pytest.skip('CloudFlare API not found')
+    pytest.skip('CloudFlare API not found', allow_module_level=True)
 
 if TYPE_CHECKING:
     from dns_synchub_cloudflare import CloudFlareDNSProvider
@@ -141,6 +141,26 @@ async def test_call(mock_logger: MagicMock, settings: Settings, mock_cf_client: 
     with patch.object(mapper, 'sync', new_callable=AsyncMock) as mock_sync:
         await mapper(Event[PollerData[PollerSourceType]](events))
         mock_sync.assert_called_once_with(events)
+
+
+@pytest.mark.asyncio
+async def test_call_respects_backoff_seconds(
+    mock_logger: MagicMock, settings: Settings, mock_cf_client: MagicMock
+) -> None:
+    mapper = CloudFlareDNSProvider(mock_logger, settings=settings, client=mock_cf_client)
+    mapper.lastcall = 100.0
+    mapper.sync_sec = 10
+    events = PollerData[PollerSourceType](['subdomain.example.ltd'], 'manual')
+
+    with (
+        patch('dns_synchub_cloudflare.cloudflare.time.time', side_effect=[105.0, 111.0, 111.0]),
+        patch('asyncio.sleep', new_callable=AsyncMock) as mock_sleep,
+        patch.object(mapper, 'sync', new_callable=AsyncMock) as mock_sync,
+    ):
+        await mapper(Event[PollerData[PollerSourceType]](events))
+
+    mock_sleep.assert_called_once_with(5.0)
+    mock_sync.assert_called_once_with(events)
 
 
 @pytest.mark.asyncio

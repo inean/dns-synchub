@@ -5,7 +5,7 @@ import logging
 import re
 from datetime import datetime
 from functools import lru_cache
-from typing import Any, cast
+from typing import Any, cast, override
 
 import docker
 import requests
@@ -21,7 +21,6 @@ from tenacity import (
     stop_after_attempt,
     wait_exponential,
 )
-from typing_extensions import override
 
 from dns_synchub.pollers import Poller, PollerData
 from dns_synchub.pollers.types import PollerSourceType
@@ -35,7 +34,7 @@ class DockerContainer:
 
     @property
     def id(self) -> str | None:
-        return self.container.attrs.get('Id')
+        return cast(str | None, self.container.attrs.get('Id'))
 
     @property
     def labels(self) -> Any:
@@ -105,7 +104,7 @@ class DockerPoller(Poller[DockerClient]):
                 raise ConnectionError('Could not connect to Docker') from err
             else:
                 # Get Docker Host info
-                info = cast(dict[str, Any], self._client.info())  # type: ignore
+                info = cast(dict[str, Any], self._client.info())  # type: ignore[no-untyped-call]
                 self.logger.debug(f"Connected to Docker Host at '{info.get('Name')}'")
         return self._client
 
@@ -191,7 +190,7 @@ class DockerPoller(Poller[DockerClient]):
         filters = {'status': 'running'}
         stop = stop_after_attempt(self.config['stop'])
         wait = wait_exponential(multiplier=self.config['wait'], max=self.tout_sec)
-        raw_data = []
+        result: list[DockerContainer] = []
         try:
             async for attempt_ctx in AsyncRetrying(stop=stop, wait=wait):
                 with attempt_ctx:
@@ -204,7 +203,8 @@ class DockerPoller(Poller[DockerClient]):
                         self.logger.debug(f'Docker.fetch attempt {att} failed: {err}')
                         raise
         except RetryError as err:
-            last_error = err.last_attempt.result()
+            last_error = err.last_attempt.exception()
             self.logger.critical(f'Could not fetch containers: {last_error}')
+            raise ConnectionError('Could not fetch containers') from last_error
         # Return a collection of routes
-        return self._validate(result)  # pyright: ignore[reportPossiblyUnboundVariable]
+        return self._validate(result)

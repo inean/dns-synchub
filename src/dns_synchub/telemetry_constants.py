@@ -17,9 +17,9 @@ class TelementryExporters:
 # Default Environment values
 class TelemetryEnvDefaults:
     OTEL_SERVICE_NAME = 'dns-synchub'
-    OTEL_TRACES_EXPORTER = 'otlp'
-    OTEL_LOGGER_EXPORTER = 'otlp'
-    OTEL_METRICS_EXPORTER = 'otlp'
+    OTEL_TRACES_EXPORTER = 'none'
+    OTEL_LOGGER_EXPORTER = 'none'
+    OTEL_METRICS_EXPORTER = 'none'
 
 
 # Attributes

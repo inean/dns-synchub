@@ -40,7 +40,8 @@ def parse_args() -> Args:
         metadata = field_info.metadata
         default = field_info.default if field_info.default is not MISSING else None
         # Add the argument to the parser
-        parser.add_argument(f'--{name.replace("_", "-")}', default=default, **metadata)
+        arg_name = '--' + name.replace('_', '-')
+        parser.add_argument(arg_name, default=default, **metadata)
 
     args = parser.parse_args()
 

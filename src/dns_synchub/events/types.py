@@ -1,6 +1,6 @@
 import asyncio
 from abc import abstractmethod
-from collections.abc import Coroutine
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import (
     Generic,
@@ -28,5 +28,6 @@ class EventSubscriber(Protocol[T]):
     async def __call__(self, event: Event[T]) -> None: ...
 
 
-EventSubscriberType = Coroutine[None, None, None] | EventSubscriber[T]
+EventSubscriberCallable = Callable[[Event[T]], Awaitable[None]]
+EventSubscriberType = EventSubscriberCallable[T]
 EventSubscriberDataType = tuple[asyncio.Queue[Event[T]], float, float]

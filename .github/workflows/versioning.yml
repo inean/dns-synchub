@@ -37,18 +37,19 @@ jobs:
           # Check for #feature or #fix label and set the bump type
           if [[ $labels == *"#feature"* ]]; then
             echo "Detected #feature label. Setting bump type to minor."
-            echo "::set-output name=bump_type::minor"
+            echo "bump_type=minor" >> "$GITHUB_OUTPUT"
           elif [[ $labels == *"#fix"* ]]; then
             echo "Detected #fix label. Setting bump type to fix."
-            echo "::set-output name=bump_type::fix"
-          else:
+            echo "bump_type=fix" >> "$GITHUB_OUTPUT"
+          else
             echo "PR does not have a valid label (#feature or #fix). Exiting."
             exit 1
+          fi
 
       - name: Set Bump Type Manually (for Dispatch)
         id: set_dispatch_bump
         if: github.event_name == 'workflow_dispatch'
-        run: echo "::set-output name=bump_type::${{ github.event.inputs.bump-type }}"
+        run: echo "bump_type=${{ github.event.inputs.bump-type }}" >> "$GITHUB_OUTPUT"
 
       - name: Bump Version
         id: bump

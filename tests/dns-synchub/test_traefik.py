@@ -50,3 +50,16 @@ async def test_no_routers(traefik_poller: TraefikPoller, mock_api_no_routers: Ma
     data = await traefik_poller.fetch()
     assert data.source == 'traefik'
     assert data.hosts == []
+
+
+@pytest.mark.asyncio
+async def test_route_without_host_is_ignored(traefik_poller: TraefikPoller) -> None:
+    with patch('requests.Session.get') as mock_get:
+        mock_get.return_value.raise_for_status.return_value = None
+        mock_get.return_value.json.return_value = [
+            {'status': 'enabled', 'name': 'router-without-host', 'rule': 'Path(`/health`)'}
+        ]
+        data = await traefik_poller.fetch()
+
+    assert data.source == 'traefik'
+    assert data.hosts == []

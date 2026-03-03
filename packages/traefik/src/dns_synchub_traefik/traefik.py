@@ -77,8 +77,7 @@ class TraefikPoller(Poller[Session]):
                 self.logger.info(f"Found Traefik Router: {route['name']} with Hostname {host}")
                 hosts.append(host)
         # Return a collection of zones to sync
-        if 'source' not in self.config:
-            raise ValueError('Traefik poller config must define "source"')
+        assert 'source' in self.config
         return PollerData[PollerSourceType](hosts, self.config['source'])
 
     @override

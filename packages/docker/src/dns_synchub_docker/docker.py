@@ -135,8 +135,7 @@ class DockerPoller(Poller[DockerClient]):
             for host in container.hosts:
                 hosts.append(host)
         # Return a collection of zones to sync
-        if 'source' not in self.config:
-            raise ValueError('Docker poller config must define "source"')
+        assert 'source' in self.config
         return PollerData[PollerSourceType](hosts, self.config['source'])
 
     @override

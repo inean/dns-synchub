@@ -1,0 +1,31 @@
+[build-system]
+  build-backend = "hatchling.build"
+  requires = ["hatchling"]
+
+[project]
+  authors = [{ name = "Carlos Martín", email = "inean.es@gmail.com" }]
+  dependencies = [
+    "dns-synchub",
+    "telemetry",
+    # External dependencies
+    "requests>=2.26.0",
+    "tenacity>=8.0.1",
+  ]
+  description = "Trefik poller (sync) for DNS Synchub"
+  license = "MIT"
+  name = "dns-synchub-traefik"
+  readme = "README.md"
+  requires-python = ">=3.13"
+  version = "0.1a0"
+
+  [project.entry-points.'dns_synchub.pollers']
+    traefik = 'dns_synchub_traefik:TraefikPoller'
+
+[tool.uv]
+  dev-dependencies = [
+    "types-requests>=2.26.0",
+  ]
+
+  [tool.uv.sources]
+    dns-synchub = { workspace = true }
+    telemetry = { workspace = true }

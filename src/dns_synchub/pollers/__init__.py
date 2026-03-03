@@ -1,9 +1,9 @@
-from __future__ import annotations
-
-from abc import ABC, abstractmethod
 import asyncio
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from functools import lru_cache
+from importlib import metadata
 from logging import Logger
 from typing import (
     Any,
@@ -13,15 +13,23 @@ from typing import (
     Protocol,
     TypedDict,
     TypeVar,
+    final,
+    override,
     runtime_checkable,
 )
 from weakref import ref as WeakRef
 
-from typing_extensions import override
-
 from dns_synchub.events import EventEmitter
+from dns_synchub.events.types import EventSubscriberType
+from dns_synchub.pollers.types import PollerSourceType
 from dns_synchub.settings import Settings
-from dns_synchub.types import EventSubscriberType, PollerSourceType
+from dns_synchub.telemetry_constants import (
+    TelemetryAttributes as Attrs,
+    TelemetryConstants as Constants,
+    TelemetrySpans as Spans,
+)
+from dns_synchub.tracer import telemetry_tracer
+from dns_synchub.utils._classproperty import classproperty
 
 T = TypeVar('T')
 
@@ -54,8 +62,9 @@ class PollerConfig(TypedDict, Generic[T]):
 
 class BasePoller(ABC, PollerProtocol[T], Generic[T]):
     # Generic Typed ClassVars are not supported.
-    # See https://github.com/python/typing/discussions/1424 for
-    # open discussion about support
+    #
+    # See https://github.com/python/typing/discussions/1424 for details
+    #
     config: ClassVar[PollerConfig[T]] = {  # type: ignore
         'stop': 3,
         'wait': 4,
@@ -70,6 +79,7 @@ class BasePoller(ABC, PollerProtocol[T], Generic[T]):
             client (Any): The client instance for making requests.
         """
         self.logger = logger
+        self.tracer = telemetry_tracer().get_tracer('otel.instrumentation.pollers')
         self._wtask: asyncio.Task[None]
 
     @abstractmethod
@@ -82,6 +92,7 @@ class BasePoller(ABC, PollerProtocol[T], Generic[T]):
         """
         pass
 
+    @final
     async def start(self, timeout: float | None = None) -> None:
         """
         Starts the Poller and watches for changes.
@@ -91,35 +102,57 @@ class BasePoller(ABC, PollerProtocol[T], Generic[T]):
                                     the method will wait indefinitely.
         """
         name = self.__class__.__name__
-        self.logger.info(f'Starting {name}: Watching for changes')
-        # self.fetch is called for the firstime, whehever a a client subscribe to
-        # this poller, so there's no need to initialy fetch data
-        self._wtask = asyncio.create_task(self._watch())
-        if timeout is not None:
-            until = datetime.now() + timedelta(seconds=timeout)
-            self.logger.debug(f'{name}: Stop programed at {until}')
-        try:
-            await asyncio.wait_for(self._wtask, timeout)
-        except TimeoutError:
-            self.logger.info(f"{name}: Run timeout '{timeout}s' reached")
-        except asyncio.CancelledError:
-            self.logger.info(f'{name}: Run was cancelled')
-        finally:
-            await self.stop()
 
+        with self.tracer.start_as_current_span(
+            Spans.POLLER_START,
+            attributes={
+                Attrs.POLLER_CLASS: name,
+                Attrs.TIMEOUT_VALUE: timeout or Constants.TIMEOUT_ENDLESS,
+            },
+        ) as span:
+            self.logger.info(f'Starting {name}: Watching for changes')
+            # self.fetch is called for the firstime, whehever a a client subscribe to
+            # this poller, so there's no need to initially fetch data
+            self._wtask = asyncio.create_task(self._watch())
+            if timeout is not None:
+                until = datetime.now() + timedelta(seconds=timeout)
+                span.set_attribute(Attrs.TIMEOUT_STOP_AT, f'{until}')
+                self.logger.debug(f'{name}: Stop programmed at {until}')
+            try:
+                await asyncio.wait_for(self._wtask, timeout)
+            except asyncio.CancelledError:
+                span.set_attribute(Attrs.STATE_CANCELLED, True)
+                self.logger.info(f'{name}: Run was cancelled')
+            except TimeoutError:
+                span.set_attribute(Attrs.TIMEOUT_REACHED, True)
+                self.logger.info(f"{name}: Run timeout '{timeout}s' reached")
+            finally:
+                await self.stop()
+
+    @final
     async def stop(self) -> None:
         name = self.__class__.__name__
-        if self._wtask and not self._wtask.done():
-            self.logger.info(f'Stopping {name}: Cancelling watch task')
-            self._wtask.cancel()
-            try:
-                await self._wtask
-            except asyncio.CancelledError:
-                self.logger.info(f'{name}: Watch task was cancelled')
+        with self.tracer.start_as_current_span(
+            Spans.POLLER_STOP,
+            attributes={
+                Attrs.POLLER_CLASS: name,
+            },
+        ) as span:
+            span.set_attribute(Attrs.STATE_RUNNING, False)
+            if self._wtask and not self._wtask.done():
+                span.set_attribute(Attrs.STATE_RUNNING, True)
+                self.logger.info(f'Stopping {name}: Cancelling watch task')
+                self._wtask.cancel()
+                try:
+                    with self.tracer.start_as_current_span(Spans.ASYNCIO_CANCEL):
+                        await self._wtask
+                except asyncio.CancelledError:
+                    span.add_event(Attrs.STATE_CANCELLED)
+                    self.logger.info(f'{name}: Watch task was cancelled')
 
 
 class PollerEventEmitter(EventEmitter[PollerData[PollerSourceType]]):
-    def __init__(self, logger: Logger, *, poller: Poller[Any]):
+    def __init__(self, logger: Logger, *, poller: 'Poller[Any]'):
         assert 'source' in poller.config
         self.poller = WeakRef(poller)
         super().__init__(logger, origin=poller.config['source'])
@@ -154,12 +187,10 @@ class Poller(BasePoller[PollerSourceType], Generic[T]):
         assert self._client is not None, 'Client is not initialized'
         return self._client
 
-
-# ruff: noqa: E402
-
-from dns_synchub.pollers.docker import DockerPoller
-from dns_synchub.pollers.traefik import TraefikPoller
-
-# ruff: enable
-
-__all__ = ['TraefikPoller', 'DockerPoller']
+    @classproperty
+    @lru_cache(maxsize=None)
+    def backends(cls) -> dict[str, Any]:
+        backends: dict[str, Any] = {}
+        for entry_point in metadata.entry_points(group='dns_synchub.pollers'):
+            backends[entry_point.name] = entry_point.load()
+        return backends

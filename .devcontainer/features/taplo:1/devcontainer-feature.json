@@ -1,0 +1,10 @@
+{
+    "id": "taplo",
+    "version": "1.0.0",
+    "name": "Taplo Installer",
+    "description": "Installs Taplo in the dev container.",
+    "options": {},
+    "installsAfter": [
+        "ghcr.io/devcontainers/features/common-utils"
+    ]
+}

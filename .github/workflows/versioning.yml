@@ -1,0 +1,65 @@
+name: Bump Version Based on Labels or Manual Dispatch
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+
+  workflow_dispatch:
+    inputs:
+      bump-type:
+        description: 'Bump type'
+        required: true
+        default: 'fix'
+        type: choice
+        options:
+          - major
+          - minor
+          - fix
+
+jobs:
+  bump-version:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set Bump Type Automatically (for PR Merge)
+        id: check_labels
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "PR labels: ${{ toJson(github.event.pull_request.labels) }}"
+          # Get the labels from the PR
+          labels=$(echo "${{ toJson(github.event.pull_request.labels) }}" | jq -r '.[].name')
+
+          # Check for #feature or #fix label and set the bump type
+          if [[ $labels == *"#feature"* ]]; then
+            echo "Detected #feature label. Setting bump type to minor."
+            echo "bump_type=minor" >> "$GITHUB_OUTPUT"
+          elif [[ $labels == *"#fix"* ]]; then
+            echo "Detected #fix label. Setting bump type to fix."
+            echo "bump_type=fix" >> "$GITHUB_OUTPUT"
+          else
+            echo "PR does not have a valid label (#feature or #fix). Exiting."
+            exit 1
+          fi
+
+      - name: Set Bump Type Manually (for Dispatch)
+        id: set_dispatch_bump
+        if: github.event_name == 'workflow_dispatch'
+        run: echo "bump_type=${{ github.event.inputs.bump-type }}" >> "$GITHUB_OUTPUT"
+
+      - name: Bump Version
+        id: bump
+        uses: callowayproject/bump-my-version@master
+        with:
+          # Use the bump type from label for PR merge or from input for manual dispatch
+          args: ${{ steps.check_labels.outputs.bump_type || steps.set_dispatch_bump.outputs.bump_type }}
+          github-token: ${{ secrets.GH_TOKEN }}
+
+      - name: Confirm Version Bump
+        if: steps.bump.outputs.bumped == 'true'
+        run: |
+          echo "Version was bumped from ${{ steps.bump.outputs.previous-version }} to ${{ steps.bump.outputs.current-version }}!"

@@ -1,0 +1,26 @@
+[build-system]
+  build-backend = "hatchling.build"
+  requires = ["hatchling"]
+
+[project]
+  authors = [{ name = "Carlos Martín", email = "inean.es@gmail.com" }]
+  dependencies = [
+    "dns-synchub",
+    "opentelemetry-distro==0.48b0",
+    "rich-click>=1.8.3",
+  ]
+  description = "Command line for dns-synchub"
+  license = "MIT"
+  name = "dns-synchub-cli"
+  readme = "README.md"
+  requires-python = ">=3.13"
+  version = "0.1a0"
+
+  [project.scripts]
+    dns-synchub = "dns_synchub_cli.cli:cli"
+
+[tool.uv]
+  dev-dependencies = []
+
+  [tool.uv.sources]
+    dns-synchub = { workspace = true }

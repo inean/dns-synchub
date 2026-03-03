@@ -1,9 +1,29 @@
-from abc import ABC
+from abc import ABC, abstractmethod
+from functools import lru_cache
+from importlib import metadata
 from logging import Logger
-from typing import Generic, Protocol, TypedDict, TypeVar, runtime_checkable
+from typing import (
+    Any,
+    Generic,
+    Protocol,
+    TypedDict,
+    TypeVar,
+    runtime_checkable,
+)
 
+from dns_synchub.events.types import (
+    EventSubscriber,
+    EventSubscriberType as EventSubscriberType,
+)
+from dns_synchub.pollers.types import (
+    PollerSourceType as PollerSourceType,
+)
 from dns_synchub.settings import Settings
-from dns_synchub.types import DomainsModel, EventSubscriber
+from dns_synchub.settings.types import (
+    Domains,
+)
+from dns_synchub.tracer import telemetry_tracer
+from dns_synchub.utils._classproperty import classproperty
 
 T = TypeVar('T')  # Client backemd
 E = TypeVar('E')  # Event type accepted
@@ -12,6 +32,7 @@ R = TypeVar('R')  # Result type
 
 @runtime_checkable
 class MapperProtocol(EventSubscriber[E], Protocol[E, R]):
+    @abstractmethod
     async def sync(self, data: E) -> list[R] | None: ...
 
 
@@ -33,9 +54,10 @@ class BaseMapper(ABC, MapperProtocol[E, R], Generic[E, R]):
 
     def __init__(self, logger: Logger):
         self.logger = logger
+        self.tracer = telemetry_tracer().get_tracer('otel.instrumentation.mappers')
 
 
-class Mapper(BaseMapper[E, DomainsModel], Generic[E, T]):
+class Mapper(BaseMapper[E, Domains], Generic[E, T]):
     def __init__(self, logger: Logger, *, settings: Settings, client: T | None = None):
         # init client
         self._client: T | None = client
@@ -57,7 +79,10 @@ class Mapper(BaseMapper[E, DomainsModel], Generic[E, T]):
         assert self._client is not None, 'Client is not initialized'
         return self._client
 
-
-from dns_synchub.mappers.cloudflare import CloudFlareMapper  # noqa: E402
-
-__all__ = ['CloudFlareMapper']
+    @classproperty
+    @lru_cache(maxsize=None)
+    def backends(cls) -> dict[str, Any]:
+        backends: dict[str, Any] = {}
+        for entry_point in metadata.entry_points(group='dns_synchub.mappers'):
+            backends[entry_point.name] = entry_point.load()
+        return backends

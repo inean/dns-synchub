@@ -1,169 +1,266 @@
 [project]
-name = "dns-synchub"
-description = """
-This will build a Docker image to automatically update CloudFlare DNS
-records upon container start when using Traefik as a Reverse Proxy
-"""
-authors = [
-    { name = "Carlos Martín", email = "inean.es@gmail.com" },
-]
-license = "MIT"
-readme = "README.md"
-version = "0.1.0"
-dependencies = [
-    "cloudflare <= 2.20",
-    "docker>=7.1.0",
+  authors = [{ name = "Carlos Martín", email = "inean.es@gmail.com" }]
+  dependencies = [
+    #settings
     "pydantic >= 2.0",
-    "pydantic-settings @ git+https://github.com/inean/pydantic-settings@2.3",
-    "python-dotenv>=1.0.1",
-    "requests>=2.26.0",
-    "tenacity>=9.0.0",
-    "typing-extensions>= 4.5.0",
-]
-requires-python = ">= 3.11"
+    "pydantic-settings @ git+https://github.com/inean/pydantic-settings.git@2.3",
+    # telemetry
+    "opentelemetry-api>=1.27.0",
+    "opentelemetry-sdk>=1.27.0",
+  ]
+  description = """
+  This will build a Docker image to automatically update CloudFlare DNS
+  records upon container start when using Traefik as a Reverse Proxy
+  """
+  name = "dns-synchub"
+  readme = "README.md"
+  requires-python = ">= 3.13"
+  version = "0.1a0"
 
-[project.optional-dependencies]
+  [project.optional-dependencies]
+    cli = ["dns-synchub-cli"]
+    cloudflare = ["dns-synchub-cloudflare"]
+    docker = ["dns-synchub-docker"]
+    otlp = ["opentelemetry-exporter-otlp-proto-grpc >= 0.49b0"]
+    traefik = ["dns-synchub-traefik"]
 
-[project.urls]
-Homepage = "https://github.com/inean/dns-synchub"
-Source = "https://github.com/inean/dns-synchub"
-Changelog = "https://github.com/inean/dns-synchub/blob/main/CHANGELOG.md"
+  [project.urls]
+    Changelog = "https://github.com/inean/dns-synchub/blob/main/CHANGELOG.md"
+    Homepage = "https://github.com/inean/dns-synchub"
+    Source = "https://github.com/inean/dns-synchub"
 
-[project.scripts]
-dns-synchub = "dns_synchub:main"
-
+##
+# Build system configuration (uv)
+##
 [tool.uv]
-dev-dependencies = [
-    # lint
-    "mypy>=1.11.2",
+  dev-dependencies = [
+    # tools
+    "bump-my-version>=0.27.0",
     "pre-commit>=3.7.1",
-    "pyupgrade>=3.16.0",
-    "ruff>=0.5.4",
+    # lint
     "deptry>=0.20.0",
+    "mypy>=1.11.2",
+    "pyupgrade>=3.16.0",
+    "pyright>=1.1.389",
+    "ruff>=0.5.4",
     # test
     "pytest-asyncio>=0.23.8",
     "pytest-cov>=5.0.0",
+    "pytest-env>=1.1.5",
     "pytest-mock >=3.14.0",
+    "pytest-pretty>=1.2.0",
     "pytest>=8.3.2",
-    "pytest-pretty",
-    # Type stubs
-    "types-docker>=7.1.0.20240827",
-]
+    "types-docker>=7.1.0",
+    "types-requests>=2.32.0",
+  ]
+  package = true
 
+  [tool.uv.workspace]
+    members = ["packages/*"]
+
+  [tool.uv.sources]
+    dns-synchub-cli = { workspace = true }
+    dns-synchub-cloudflare = { workspace = true }
+    dns-synchub-docker = { workspace = true }
+    dns-synchub-traefik = { workspace = true }
+    telemetry = { workspace = true }
+
+##
+# Bumpversion configuration
+##
+[tool.bumpversion]
+  allow_dirty = true
+  current_version = "0.1a0"
+  parse = """(?x)
+    (?P<major>0|[1-9]\\d*)\\.
+    (?P<minor>0|[1-9]\\d*)
+    (?:
+        (?P<label>[a-zA-Z-]+)         # pre-release label
+        (?P<fix>0|[1-9]\\d*)        # pre-release version number
+    )?                                # pre-release section is optional
+"""
+  regex = true
+  replace = "version = \"{new_version}\""
+  search = "version(\\s*)=(\\s*)\"{current_version}\""
+  serialize = ["{major}.{minor}", "{major}.{minor}{label}{fix}"]
+
+  [tool.bumpversion.parts.label]
+    optional_value = "final"
+    values = [
+      "a",
+      "b",
+      "rc",
+      "final",
+    ]
+
+  [[tool.bumpversion.files]]
+    filename = "src/dns_synchub/__about__.py"
+    replace = "{new_version}"
+    search = "{current_version}"
+
+  [[tool.bumpversion.files]]
+    filename = "src/dns_synchub/__about__.py"
+    regex = true
+    replace = "'{now:%Y-%m-%d}'"
+    search = "'\\d{{4}}-\\d{{2}}-\\d{{2}}'"
+
+  [[tool.bumpversion.files]]
+    glob = "packages/*/pyproject.toml"
+
+##
+# Test configuration
+##
 [tool.pytest.ini_options]
-asyncio_default_fixture_loop_scope = "function"
-markers = [
+  asyncio_default_fixture_loop_scope = "function"
+  cache_dir = ".cache/pytest"
+  markers = [
     "skip_fixture(name): Skip the test if the specified mark is present",
-]
-testpaths = "tests"
-pythonpath = [
-    "src",
-]
-filterwarnings = [
-    "error",
-]
+  ]
+  pythonpath = ["src"]
+  testpaths = ["tests"]
+[tool.pytest_env]
+  OTEL_LOGGER_EXPORTER = 'none'
+  OTEL_METRICS_EXPORTER = 'none'
+  OTEL_TRACES_EXPORTER = 'none'
 
+##
+# Coverage configuration
+##
 [tool.coverage.run]
-branch = true
-source = [
+  branch = true
+  context = '${CONTEXT}'
+  source = [
     'dns_synchub',
-]
-context = '${CONTEXT}'
+    'packages',
+  ]
 
 [tool.coverage.report]
-precision = 2
-exclude_lines = [
-    'pragma: no cover',
-    'raise NotImplementedError',
-    'raise NotImplemented',
-    'if TYPE_CHECKING:',
+  exclude_lines = [
     '@overload',
-]
+    'if TYPE_CHECKING:',
+    'pragma: no cover',
+    'raise NotImplemented',
+    'raise NotImplementedError',
+  ]
+  precision = 2
 
 [tool.coverage.paths]
-source = [
+  source = [
     'src/dns_synchub/',
-]
+    'packages/*/src/',
+  ]
 
-[tool.ruff]
-# set max-line-length to 100
-line-length = 100
-# Enable preview features.
-preview = true
-
-[tool.ruff.format]
-# format code inside docstrings
-docstring-code-format = true
-# Prefer single quotes over double quotes.
-quote-style = 'single'
-# Enable preview style formatting.
-preview = true
-
-[tool.ruff.lint]
-# On top of the default `select` (`E4`, E7`, `E9`, and `F`),
-extend-select = [
-    # code complexity rules
-    'C90',
-    # isort rules
-    'I',
-    #
-    'RUF100',
-]
-extend-fixable = [
-    # line too-long rule
-    'E501',
-    # isort rules
-    'I',
-    # flake8-bugbear rules
-    'B',
-    # flake8-quotes rules
-    'Q',
-    'RUF100',
-    # pydocstyle rules
-    'D',
-    # pyupgrade rules
-    'UP',
-]
-
-[tool.ruff.lint.isort]
-force-sort-within-sections = true
-known-first-party = [
-    'src',
-]
-
-[tool.ruff.lint.mccabe]
-max-complexity = 10
-
-[tool.ruff.lint.flake8-quotes]
-inline-quotes = 'single'
-multiline-quotes = 'double'
-
-[tool.ruff.lint.pycodestyle]
-max-line-length = 120
-
-[tool.ruff.lint.pydocstyle]
-convention = 'google'
-
-[tool.ruff.lint.pyupgrade]
-keep-runtime-typing = true
-
-[tool.deptry]
-root = 'src/dns_synchub'
-
+##
+# Linter Configuration (MyPy)
+##
 [tool.mypy]
-strict = true
-files = [
+  files = [
     "src/",
     "tests/",
-]
-# Third party type stubs
-mypy_path = "types"
-#Don't prevents discovery of packages that don’t have an __init__.py
-namespace_packages = true
+    "types/",
+    "packages/",
+  ]
+  strict = true
+  # Cache directory for MyPy
+  cache_dir = ".cache/mypy"
+  # Third party type stubs
+  mypy_path = "types"
+  # Don't prevents discovery of packages that don’t have an __init__.py
+  namespace_packages = true
 
-[[tool.mypy.overrides]]
-module = [
-    'dotenv.*',
-]
-#Silently ignore imports of missing modules
-ignore_missing_imports = true
+  [[tool.mypy.overrides]]
+    module = ['telemetry']
+    # Silent unused ignore errors because some are needed with pylance strict mode
+    warn_unused_ignores = false
+
+###
+# Linter Configuration (Pyright)
+##
+[tool.pyright]
+  include = [
+    "src",
+    "packages",
+    "tests",
+    "types",
+    "scripts",
+  ]
+  stubPath = "types"
+  typeCheckingMode = "strict"
+
+##
+# Formatter Configuration (Ruff)
+##
+[tool.ruff]
+  # Cache directory for Ruff
+  cache-dir = ".cache/ruff"
+  # set max-line-length to 100
+  line-length = 100
+  # Enable preview features.
+  preview = true
+
+  [tool.ruff.format]
+    # format code inside docstrings
+    docstring-code-format = true
+    # Prefer single quotes over double quotes.
+    quote-style = 'single'
+    # Enable preview style formatting.
+    preview = true
+
+  [tool.ruff.lint]
+    # On top of the default `select` (`E4`, E7`, `E9`, and `F`),
+    extend-fixable = [
+      # line too-long rule
+      'E501',
+      # isort rules
+      'I',
+      # flake8-bugbear rules
+      'B',
+      # flake8-quotes rules
+      'Q',
+      'RUF100',
+      # pydocstyle rules
+      'D',
+      # pyupgrade rules
+      'UP',
+    ]
+    extend-select = [
+      # code complexity rules
+      'C90',
+      # isort rules
+      'I',
+      #
+      'RUF100',
+    ]
+
+    [tool.ruff.lint.isort]
+      combine-as-imports = true
+
+    [tool.ruff.lint.mccabe]
+      max-complexity = 10
+
+    [tool.ruff.lint.flake8-quotes]
+      inline-quotes = 'single'
+      multiline-quotes = 'double'
+
+    [tool.ruff.lint.pycodestyle]
+      max-line-length = 120
+
+    [tool.ruff.lint.pydocstyle]
+      convention = 'google'
+
+    [tool.ruff.lint.pyupgrade]
+      keep-runtime-typing = true
+
+##
+# Dependency management configuration (Deptry)
+##
+[tool.deptry]
+  root = 'src/dns_synchub'
+
+  [tool.deptry.per_rule_ignores]
+    DEP002 = [
+      "dns-synchub-cloudflare",
+      "dns-synchub-docker",
+      "dns-synchub-traefik",
+      "opentelemetry-exporter-otlp-proto-grpc",
+    ]

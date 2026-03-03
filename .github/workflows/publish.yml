@@ -19,9 +19,8 @@ on:
     branches: [main]
     paths:
       - Dockerfile
-      - requirements.lock
       - pyproject.toml
-      - src/dns_synchub/dns_synchub/__about__.py
+      - src/dns_synchub/__about__.py
 
 env:
   REGISTRY: ghcr.io

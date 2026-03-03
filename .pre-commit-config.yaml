@@ -1,16 +1,51 @@
 ---
-default_stages: [commit]
+default_stages: [pre-commit]
+
 repos:
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: detect-private-key
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+        exclude: ^(.*/devcontainer\.json|\.vscode/.*)$
+      - id: pretty-format-json
+        exclude: ^(.*/devcontainer\.json|\.vscode/.*)$
+        args:
+          - --autofix
+          - --no-sort-keys
+          - --indent=4
+
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.6.5
     hooks:
       - id: ruff
         name: Ruff linter
-        args: [--fix]
+        args: [--fix, --exit-non-zero-on-fix]
         types_or: [python, pyi]
       - id: ruff-format
         name: Ruff format
         types_or: [python, pyi]
+
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.3.0
+    hooks:
+    - id: codespell
+      additional_dependencies:
+        - tomli
+      args: [--ignore-words-list, astroid ]
+
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+    -   id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+        additional_dependencies: ["gibberish-detector"]
 
   - repo: https://github.com/executablebooks/mdformat
     rev: 0.7.17
@@ -18,6 +53,11 @@ repos:
       - id: mdformat
         additional_dependencies:
           - mdformat-ruff
+          - mdformat-tables
+          - mdformat-frontmatter
+          - mdformat-admon
+          - mdformat-wikilink
+
 
   - repo: https://github.com/hadolint/hadolint
     rev: v2.13.0-beta
@@ -29,15 +69,42 @@ repos:
         types: ["dockerfile"]
         entry: hadolint
 
+  - repo: https://github.com/econchick/interrogate
+    rev: 1.7.0  # or master if you're bold
+    hooks:
+      - id: interrogate
+        args: [--quiet, --fail-under=1]
+        exclude: test.*
+
   - repo: local
     hooks:
-      - id: update-version
-        name: Update Version
-        entry: uv run scripts/versioning.py
-        language: python
-        pass_filenames: false
-        stages: [commit]
-        files: ^pyproject\.toml$
+      - id: taplo-lint
+        name: taplo lint
+        entry: taplo check
+        language: system
+        types: [toml]
+
+      - id: taplo-format
+        name: taplo format
+        entry: taplo format
+        language: system
+        types: [toml]
+        args:
+          - --option
+          - array_auto_collapse=false
+          - --option
+          - array_auto_expand=true
+          - --option
+          - allowed_blank_lines=1
+          - --option
+          - array_trailing_comma=true
+          - --option
+          - indent_entries=true
+          - --option
+          - indent_tables=true
+          - --option
+          - reorder_keys=true
+
 
       - id: mypy
         name: mypy static type checker
@@ -48,7 +115,7 @@ repos:
 
       - id: pyupgrade
         name: Pyupgrade
-        entry: uv run pyupgrade --py311-plus
+        entry: uv run pyupgrade --py312-plus
         types: [python]
         language: system
 

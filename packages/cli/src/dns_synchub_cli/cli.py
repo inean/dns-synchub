@@ -2,7 +2,6 @@ import argparse
 import asyncio
 import logging
 import os
-import re
 import sys
 from dataclasses import MISSING, dataclass, field, fields
 from logging import Logger
@@ -64,15 +63,11 @@ def show_config(settings: settings.Settings) -> logging.Logger:
 
     log.debug(f"Traefik Polling Mode: {'On' if settings.enable_traefik_poll else 'Off'}")
     if settings.enable_traefik_poll:
-        if settings.traefik_poll_url and re.match(r'^\w+://[^/?#]+', settings.traefik_poll_url):
-            log.debug(f'Traefik Poll Url: {settings.traefik_poll_url}')
-            log.debug(f'Traefik Poll Seconds: {settings.traefik_poll_seconds}')
-        else:
-            settings.enable_traefik_poll = False
-            log.error(f'Traefik polling disabled: Bad url: {settings.traefik_poll_url}')
+        log.debug(f'Traefik Poll Url: {settings.traefik_poll_url}')
+        log.debug(f'Traefik Poll Seconds: {settings.traefik_poll_seconds}')
 
     log.debug(f"Docker Polling Mode: {'On' if settings.enable_docker_poll else 'Off'}")
-    log.debug(f'Docker Poll Seconds: {settings.docker_timeout_seconds}')
+    log.debug(f'Docker Poll Seconds: {settings.docker_poll_seconds}')
 
     for dom in settings.domains:
         log.debug(f'Domain Configuration: {dom.name}')
@@ -104,13 +99,10 @@ async def run(log: Logger, *, settings: Settings) -> None:
         pollers.append(DockerPoller(log, settings=settings))
 
     # Start Pollers
-    try:
-        async with asyncio.TaskGroup() as tg:
-            for poller in pollers:
-                await poller.events.subscribe(dns)
-                tg.create_task(poller.start())
-    except asyncio.CancelledError:
-        pass
+    async with asyncio.TaskGroup() as tg:
+        for poller in pollers:
+            await poller.events.subscribe(dns)
+            tg.create_task(poller.start())
 
 
 def cli() -> int:
@@ -137,6 +129,11 @@ def cli() -> int:
         # asyncio.run will cancel any task pending when the main function exits
         log.info('Cancel by user.')
         log.info('Exiting...')
+        return 130
+    except asyncio.CancelledError:
+        log.info('Cancelled.')
+        log.info('Exiting...')
+        return 130
 
     # Exit grqacefully
     return 0

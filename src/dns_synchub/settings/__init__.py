@@ -104,6 +104,9 @@ class Settings(BaseSettings):
     def sanity_options(self) -> Self:
         if self.enable_traefik_poll and not self.traefik_poll_url:
             raise ValueError('Traefik Polling is enabled but no URL is set')
+        if self.enable_traefik_poll and self.traefik_poll_url:
+            if not re.match(r'^\w+://[^/?#]+', self.traefik_poll_url):
+                raise ValueError(f'Invalid Traefik polling URL: {self.traefik_poll_url}')
         return self
 
     @model_validator(mode='after')

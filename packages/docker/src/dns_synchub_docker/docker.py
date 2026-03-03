@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import re
+from collections.abc import Iterable
 from datetime import datetime
 from functools import lru_cache
 from typing import Any, cast, override
@@ -11,7 +12,7 @@ import docker
 import requests
 import tenacity
 from docker import DockerClient
-from docker.errors import NotFound
+from docker.errors import DockerException, NotFound
 from docker.models.containers import Container
 from tenacity import (
     AsyncRetrying,
@@ -97,7 +98,7 @@ class DockerPoller(Poller[DockerClient]):
                 # Init Docker client if not provided
                 self.logger.debug('Connecting to Docker...')
                 self._client = docker.from_env(timeout=self.tout_sec)
-            except Exception as err:
+            except (DockerException, requests.exceptions.RequestException, OSError) as err:
                 self._client = None
                 self.logger.error(f'Could not connect to Docker: {err}')
                 self.logger.error('Please make sure Docker is running and accessible')
@@ -135,8 +136,7 @@ class DockerPoller(Poller[DockerClient]):
             for host in container.hosts:
                 hosts.append(host)
         # Return a collection of zones to sync
-        assert 'source' in self.config
-        return PollerData[PollerSourceType](hosts, self.config['source'])
+        return PollerData[PollerSourceType](hosts, self.source)
 
     @override
     async def _watch(self) -> None:
@@ -149,7 +149,7 @@ class DockerPoller(Poller[DockerClient]):
                 f'Retry attempt {state.attempt_number}: {state.outcome.exception() if state.outcome else None}'
             ),
         )
-        async def fetch_events(kwargs: dict[str, Any]) -> Any:
+        async def fetch_events(kwargs: dict[str, Any]) -> Iterable[dict[str, Any]] | None:
             kwargs['until'] = datetime.now().strftime('%s')
             return await asyncio.to_thread(self.client.events, **kwargs)
 
@@ -157,13 +157,14 @@ class DockerPoller(Poller[DockerClient]):
             since = until
             self.logger.debug('Fetching routers from Docker API')
             # Ther's no swarm in podman engine, so remove Action filter
-            filter = {'Type': 'service', 'status': 'start'}
-            kwargs = {'since': since, 'filters': filter, 'decode': True}
-            events = None
+            event_filters = {'Type': 'service', 'status': 'start'}
+            kwargs = {'since': since, 'filters': event_filters, 'decode': True}
+            events: Any | None = None
             try:
-                events = await fetch_events(kwargs)
-                until = str(kwargs['until'])
-                for event in events:
+                if events := await fetch_events(kwargs):
+                    # set by feed events
+                    until = str(kwargs['until'])
+                for event in events or []:
                     if 'id' not in event:
                         self.logger.warning('Container ID is None. Skipping container.')
                         continue
@@ -176,13 +177,18 @@ class DockerPoller(Poller[DockerClient]):
                 await self.events.emit()
                 await asyncio.sleep(self.poll_sec)
             except tenacity.RetryError as err:
-                self.logger.error(f'Could not fetch events: {err.last_attempt.result()}')
-                raise asyncio.CancelledError from err
+                last_error = err.last_attempt.exception()
+                last_error = last_error or RuntimeError(
+                    'Retry exhausted without captured exception'
+                )
+                self.logger.error(f'Could not fetch events: {last_error}')
+                raise asyncio.CancelledError from last_error
             except asyncio.CancelledError:
                 self.logger.info('Docker polling cancelled. Performing cleanup.')
                 raise
             finally:
-                _ = events and await asyncio.to_thread(events.close)
+                if events is not None:
+                    await asyncio.to_thread(events.close)
 
     @override
     async def fetch(self) -> PollerData[PollerSourceType]:
@@ -197,7 +203,7 @@ class DockerPoller(Poller[DockerClient]):
                         containers = self.client.containers
                         raw_data = await asyncio.to_thread(containers.list, filters=filters)
                         result = [DockerContainer(c, logger=self.logger) for c in raw_data]
-                    except Exception as err:
+                    except (DockerException, requests.exceptions.RequestException, OSError) as err:
                         att = attempt_ctx.retry_state.attempt_number
                         self.logger.debug(f'Docker.fetch attempt {att} failed: {err}')
                         raise

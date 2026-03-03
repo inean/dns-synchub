@@ -32,8 +32,8 @@
 ##
 # Build system configuration (uv)
 ##
-[tool.uv]
-  dev-dependencies = [
+[dependency-groups]
+  dev = [
     # tools
     "bump-my-version>=0.27.0",
     "pre-commit>=3.7.1",
@@ -53,6 +53,8 @@
     "types-docker>=7.1.0",
     "types-requests>=2.32.0",
   ]
+
+[tool.uv]
   package = true
 
   [tool.uv.workspace]
@@ -193,6 +195,7 @@
 [tool.ruff]
   # Cache directory for Ruff
   cache-dir = ".cache/ruff"
+  target-version = "py313"
   # set max-line-length to 100
   line-length = 100
   # Enable preview features.

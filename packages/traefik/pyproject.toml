@@ -21,11 +21,11 @@
   [project.entry-points.'dns_synchub.pollers']
     traefik = 'dns_synchub_traefik:TraefikPoller'
 
-[tool.uv]
-  dev-dependencies = [
+[dependency-groups]
+  dev = [
     "types-requests>=2.26.0",
   ]
 
-  [tool.uv.sources]
-    dns-synchub = { workspace = true }
-    telemetry = { workspace = true }
+[tool.uv.sources]
+  dns-synchub = { workspace = true }
+  telemetry = { workspace = true }

@@ -3,7 +3,7 @@ import re
 from logging import Logger
 from typing import Any, override
 
-from requests import Response, Session
+from requests import Response, Session, exceptions
 from tenacity import AsyncRetrying, RetryError, stop_after_attempt, wait_exponential
 
 from dns_synchub.pollers import Poller, PollerData
@@ -77,8 +77,7 @@ class TraefikPoller(Poller[Session]):
                 self.logger.info(f"Found Traefik Router: {route['name']} with Hostname {host}")
                 hosts.append(host)
         # Return a collection of zones to sync
-        assert 'source' in self.config
-        return PollerData[PollerSourceType](hosts, self.config['source'])
+        return PollerData[PollerSourceType](hosts, self.source)
 
     @override
     async def _watch(self) -> None:
@@ -105,12 +104,13 @@ class TraefikPoller(Poller[Session]):
                         response = await asyncio.to_thread(client.get, self.poll_url)
                         response.raise_for_status()
                         rawdata = response.json()
-                    except Exception as err:
+                    except (exceptions.RequestException, ValueError) as err:
                         att = attempt_ctx.retry_state.attempt_number
                         self.logger.debug(f'Traefik.fetch attempt {att} failed: {err}')
                         raise
         except RetryError as err:
-            last_error = err.last_attempt.result()
+            last_error = err.last_attempt.exception()
+            last_error = last_error or RuntimeError('Retry exhausted without captured exception')
             self.logger.critical(f'Failed to fetch route from Traefik API: {last_error}')
         # Return a collection of routes
         return self._validate(rawdata)

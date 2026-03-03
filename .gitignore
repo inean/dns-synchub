@@ -2,6 +2,7 @@
 .cache/*
 !**/.gitkeep
 **/*.egg-info
+**/*.pyc
 
 # Ignore all uv.lock files except those in the root directory
 **/uv.lock

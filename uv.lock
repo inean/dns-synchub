@@ -281,9 +281,6 @@ requires-dist = [
     { name = "rich-click", specifier = ">=1.8.3" },
 ]
 
-[package.metadata.requires-dev]
-dev = []
-
 [[package]]
 name = "dns-synchub-cloudflare"
 version = "0.1a0"
@@ -302,9 +299,6 @@ requires-dist = [
     { name = "telemetry", editable = "packages/telemetry" },
     { name = "tenacity", specifier = ">=8.0.1" },
 ]
-
-[package.metadata.requires-dev]
-dev = []
 
 [[package]]
 name = "dns-synchub-docker"

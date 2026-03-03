@@ -211,9 +211,16 @@ async def test_run(docker_poller: DockerPoller) -> None:
     expected_calls.pop(0)
     callback_mock.reset_mock()
     docker_client_events.return_value.reset()
-    loop = asyncio.get_event_loop()
-    loop.call_later(0.1, lambda: asyncio.create_task(docker_poller.stop()))
-    await docker_poller.start()
+
+    async def stop_when_calls_reached() -> None:
+        timeout = asyncio.get_running_loop().time() + 1.0
+        while callback_mock.call_count < len(expected_calls):
+            if asyncio.get_running_loop().time() > timeout:
+                raise TimeoutError('Timed out waiting for docker poller callbacks')
+            await asyncio.sleep(0.01)
+        await docker_poller.stop()
+
+    await asyncio.gather(docker_poller.start(), stop_when_calls_reached())
     assert callback_mock.call_count == len(expected_calls)
     callback_mock.assert_has_calls(expected_calls, any_order=False)
 

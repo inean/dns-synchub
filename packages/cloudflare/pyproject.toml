@@ -21,9 +21,6 @@
   [project.entry-points.'dns_synchub.mappers']
     cloudflare = 'dns_synchub_cloudflare:CloudFlareDNSProvider'
 
-[tool.uv]
-  dev-dependencies = []
-
-  [tool.uv.sources]
-    dns-synchub = { workspace = true }
-    telemetry = { workspace = true }
+[tool.uv.sources]
+  dns-synchub = { workspace = true }
+  telemetry = { workspace = true }

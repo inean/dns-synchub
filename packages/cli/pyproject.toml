@@ -19,8 +19,5 @@
   [project.scripts]
     dns-synchub = "dns_synchub_cli.cli:cli"
 
-[tool.uv]
-  dev-dependencies = []
-
-  [tool.uv.sources]
-    dns-synchub = { workspace = true }
+[tool.uv.sources]
+  dns-synchub = { workspace = true }

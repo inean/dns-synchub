@@ -76,7 +76,8 @@ class Mapper(BaseMapper[E, Domains], Generic[E, T]):
 
     @property
     def client(self) -> T:
-        assert self._client is not None, 'Client is not initialized'
+        if self._client is None:
+            raise RuntimeError(f'{self.__class__.__name__} client is not initialized')
         return self._client
 
     @classproperty

@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import time
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Coroutine
 from functools import partial, wraps
 from logging import Logger
 from typing import Any, cast, override
@@ -69,12 +69,13 @@ def retry(func: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitable[Any]]:
                 with attempt_ctx:
                     try:
                         return await func(self, *args, **kwargs)
-                    except Exception as err:
+                    except CloudFlareExceptions.CloudFlareError as err:
                         att = attempt_ctx.retry_state.attempt_number
                         self.logger.debug(f'CloudFlare {func.__name__} attempt {att} failed: {err}')
                         raise
         except RetryError as err:
-            last_error = err.last_attempt.result()
+            last_error = err.last_attempt.exception()
+            last_error = last_error or RuntimeError('Retry exhausted without captured exception')
             raise CloudFlareException('Operation failed') from last_error
 
     return wrapper
@@ -218,7 +219,7 @@ class CloudFlareDNSProvider(Mapper[PollerData[PollerSourceType], CloudFlare]):
                     else:
                         future = self.post_record(domain_info.zone_id, **domain)
                     # Append the task to the results
-                    tasks.append(asyncio.ensure_future(future))
+                    tasks.append(asyncio.create_task(cast(Coroutine[Any, Any, Any], future)))
                     break
 
             if not tasks:
@@ -228,7 +229,10 @@ class CloudFlareDNSProvider(Mapper[PollerData[PollerSourceType], CloudFlare]):
             # run tasks concurrently
             done, pending = await asyncio.wait(tasks, timeout=self.tout_sec)
             # Cancel pending tasks
-            [task.cancel() for task in pending]
+            for task in pending:
+                task.cancel()
+            if pending:
+                await asyncio.gather(*pending, return_exceptions=True)
             # Process Exceptions and get results
             for task in done:
                 if err := task.exception():

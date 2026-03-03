@@ -6,6 +6,7 @@ from collections.abc import Callable, Generator
 from logging import Logger
 from typing import TYPE_CHECKING, Any, cast
 from unittest.mock import AsyncMock, MagicMock, call, patch
+from urllib.parse import urlparse
 
 import pytest
 
@@ -15,6 +16,7 @@ from dns_synchub.settings import Settings
 
 try:
     import docker
+    import docker.errors
 except ImportError:
     pytest.skip('Docker SDK not installed', allow_module_level=True)
     pass
@@ -24,6 +26,25 @@ if TYPE_CHECKING:
 else:
     dns_synchub_docker = pytest.importorskip('dns_synchub_docker')
     DockerPoller = dns_synchub_docker.DockerPoller
+
+
+class MockDockerEvents:
+    def __init__(self, data: list[dict[str, str]]):
+        self.data = data
+        self.close = MagicMock()
+        self.reset()
+
+    def __iter__(self) -> 'MockDockerEvents':
+        return self
+
+    def __next__(self) -> dict[str, str]:
+        try:
+            return next(self.iter)
+        except StopIteration:
+            raise docker.errors.NotFound('No more events')
+
+    def reset(self) -> None:
+        self.iter = iter(self.data)
 
 
 @pytest.fixture
@@ -56,29 +77,45 @@ def containers() -> dict[str, Any]:
 
 @pytest.fixture(autouse=True)
 def mock_requests_get(
-    request: pytest.FixtureRequest,
-    containers: dict[str, Any],
-    docker_get_side_effect_factory: Callable[[dict[str, Any]], Any],
+    request: pytest.FixtureRequest, containers: dict[str, Any]
 ) -> Generator[Any, None, Any] | Callable[..., Any]:
     for mark in request.node.iter_markers():
         if mark.name == 'skip_fixture' and request.fixturename in mark.args:
             yield
             return
     with patch('requests.Session.get') as mock_get:
-        mock_get.side_effect = docker_get_side_effect_factory(containers)
+
+        def side_effect(url: str, *args: Any, **kwargs: dict[str, Any]) -> MagicMock:
+            return_value: dict[str, Any] | list[dict[str, Any]] | None = None
+            # Process URLs
+            match urlparse(url).path:
+                case '/version':
+                    return_value = {'ApiVersion': '1.41'}
+                case '/v1.41/info':
+                    return_value = {'Name': 'Mock Docker'}
+                case '/v1.41/containers/json':
+                    return_value = [{'Id': id_} for id_ in containers.keys()]
+                case details if match := re.search(r'/v1.41/containers/([^/]+)/json', details):
+                    return_value = containers[match.group(1)]
+                case other:
+                    raise AssertionError(f'Unexpected URL: {other}')
+
+            # Create a MagicMock object to mock the response
+            response = MagicMock()
+            response.json.return_value = return_value
+            return response
+
+        mock_get.side_effect = side_effect
         yield mock_get
 
 
 @pytest.fixture
 def docker_poller(
-    logger: MagicMock,
-    settings: Settings,
-    containers: dict[str, Any],
-    docker_events_factory: Callable[[list[dict[str, str]]], Any],
+    logger: MagicMock, settings: Settings, containers: dict[str, Any]
 ) -> Generator[DockerPoller, None, None]:
     events = [{'status': 'start', 'id': id_} for id_ in containers.keys()]
     docker_client = docker.DockerClient(base_url='unix:///')
-    with patch.object(docker_client, 'events', return_value=docker_events_factory(events)):
+    with patch.object(docker_client, 'events', return_value=MockDockerEvents(events)):
         yield DockerPoller(logger, settings=settings, client=docker_client)
 
 

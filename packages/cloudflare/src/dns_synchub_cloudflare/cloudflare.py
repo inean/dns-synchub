@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import time
-from collections.abc import Awaitable, Callable, Coroutine
+from collections.abc import Awaitable, Callable
 from functools import partial, wraps
 from logging import Logger
 from typing import Any, cast, override
@@ -94,6 +94,7 @@ class CloudFlareDNSProvider(Mapper[PollerData[PollerSourceType], CloudFlare]):
 
         self.tout_sec = settings.cf_timeout_seconds
         self.sync_sec = settings.cf_sync_seconds
+        self.max_concurrency = settings.cf_max_concurrency
         self.lastcall = 0.0
 
         # Initialize the parent class
@@ -170,7 +171,13 @@ class CloudFlareDNSProvider(Mapper[PollerData[PollerSourceType], CloudFlare]):
             name=Spans.CLOUDFLARE_SYNC,
             attributes={Attrs.MAPPER_CLASS: self.__class__.__name__},
         ):
-            tasks: list[Any] = []
+            limiter = asyncio.Semaphore(self.max_concurrency)
+
+            async def run_bounded(coro: Awaitable[Any]) -> Any:
+                async with limiter:
+                    return await coro
+
+            tasks: list[asyncio.Task[Any]] = []
             for host in data.hosts:
                 for domain_info in self.domains:
                     # Don't update the domain if it's the same as the target domain, which should be used on tunnel
@@ -219,7 +226,7 @@ class CloudFlareDNSProvider(Mapper[PollerData[PollerSourceType], CloudFlare]):
                     else:
                         future = self.post_record(domain_info.zone_id, **domain)
                     # Append the task to the results
-                    tasks.append(asyncio.create_task(cast(Coroutine[Any, Any, Any], future)))
+                    tasks.append(asyncio.create_task(run_bounded(future)))
                     break
 
             if not tasks:

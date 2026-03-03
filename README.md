@@ -246,13 +246,14 @@ secrets:
 
 #### General Settings
 
-| Parameter         | Description                                    | Type                   | Default         |
-| ----------------- | ---------------------------------------------- | ---------------------- | --------------- |
-| `DRY_RUN`         | Perform a test run without making any changes. | `BOOL`                 | `FALSE`         |
-| `LOG_LEVEL`       | Logging level.                                 | `INFO, VERBOSE, DEBUG` | `INFO`          |
-| `LOG_TYPE`        | Log type.                                      | `CONSOLE, FILE, BOTH`  | `BOTH`          |
-| `LOG_FILE`        | Absolute filepath for the log file             | `STR`                  | `/logs/tcc.log` |
-| `REFRESH_ENTRIES` | If record exists, update entry with new values | `BOOL`                 | `FALSE`         |
+| Parameter          | Description                                    | Type                   | Default         |
+| ------------------ | ---------------------------------------------- | ---------------------- | --------------- |
+| `DRY_RUN`          | Perform a test run without making any changes. | `BOOL`                 | `FALSE`         |
+| `EVENT_QUEUE_SIZE` | Per-subscriber event queue max size.           | `INT`                  | `1000`          |
+| `LOG_LEVEL`        | Logging level.                                 | `INFO, VERBOSE, DEBUG` | `INFO`          |
+| `LOG_TYPE`         | Log type.                                      | `CONSOLE, FILE, BOTH`  | `BOTH`          |
+| `LOG_FILE`         | Absolute filepath for the log file             | `STR`                  | `/logs/tcc.log` |
+| `REFRESH_ENTRIES`  | If record exists, update entry with new values | `BOOL`                 | `FALSE`         |
 
 #### Discovery Settings
 
@@ -365,7 +366,17 @@ For detailed usage information, please refer to the [Pattern Matching](#pattern-
 #### Cloudflare
 
 - `CF_TOKEN`: The Cloudflare API token for authentication. Ensure this token has the necessary permissions to manage DNS records for the specified domain.
-- `CF_SYNC_INTERVAL`: The interval, in seconds, at which the synchronization process updates DNS records. Default is `300` seconds.
+- `CF_SYNC_SECONDS`: The interval, in seconds, at which synchronization runs. Default is `300`.
+- `CF_TIMEOUT_SECONDS`: Timeout for Cloudflare API operations. Default is `30`.
+- `CF_MAX_CONCURRENCY`: Max concurrent record create/update operations per sync batch. Default is `10`.
+
+### CLI Diagnostics
+
+- `dns-synchub --show-config` prints the resolved runtime configuration (JSON) and exits.
+- Exit codes:
+  - `0` success (including `--show-config`)
+  - `1` configuration/startup error
+  - `130` interrupted/cancelled
 
 ## Maintenance
 
@@ -405,9 +416,15 @@ To configure [OpenTelemetry](https://opentelemetry.io/), follow these steps:
 
 Telemetry is environment-driven; there is no CLI flag required to enable it.
 
+## Internal Docs
+
+- Runtime contract: `docs/runtime-contract.md`
+- Architecture: `docs/architecture.md`
+- Operations runbook: `docs/operations.md`
+
 ## Support
 
-For assistance with these Docker images, including troubleshooting, reporting bugs, or requesting new features, please refer to our support resources. You can submit bug reports and feature requests through our issue tracker. We are∫ committed to addressing issues promptly and considering feature requests for future updates. For additional help, consult the documentation or reach out to the community for guidance.
+For assistance with these Docker images, including troubleshooting, reporting bugs, or requesting new features, please refer to our support resources. You can submit bug reports and feature requests through our issue tracker. We are committed to addressing issues promptly and considering feature requests for future updates. For additional help, consult the documentation or reach out to the community for guidance.
 
 ### Bug Reporting
 

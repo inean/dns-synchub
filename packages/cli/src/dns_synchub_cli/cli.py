@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+import json
 import logging
 import os
 import sys
@@ -28,6 +29,10 @@ class Args:
     )
     env_file: str = field(metadata={'help': 'Path to the .env file', 'type': str})
     dry_run: bool = field(default=False, metadata={'help': 'Dry run mode', 'action': 'store_true'})
+    show_config: bool = field(
+        default=False,
+        metadata={'help': 'Print resolved runtime config and exit', 'action': 'store_true'},
+    )
 
 
 def parse_args() -> Args:
@@ -54,10 +59,48 @@ def parse_args() -> Args:
     return Args(**vars(args))
 
 
+def render_config(settings: settings.Settings) -> dict[str, Any]:
+    domains = [
+        {
+            'name': dom.name,
+            'zone_id': dom.zone_id,
+            'target_domain': dom.target_domain,
+            'ttl': dom.ttl,
+            'rc_type': dom.rc_type,
+            'proxied': dom.proxied,
+            'excluded_sub_domains': dom.excluded_sub_domains,
+        }
+        for dom in settings.domains
+    ]
+
+    return {
+        'service_name': settings.service_name,
+        'dry_run': settings.dry_run,
+        'log_level': settings.log_level,
+        'enable_docker_poll': settings.enable_docker_poll,
+        'enable_traefik_poll': settings.enable_traefik_poll,
+        'docker_poll_seconds': settings.docker_poll_seconds,
+        'docker_timeout_seconds': settings.docker_timeout_seconds,
+        'traefik_poll_seconds': settings.traefik_poll_seconds,
+        'traefik_timeout_seconds': settings.traefik_timeout_seconds,
+        'traefik_poll_url': settings.traefik_poll_url,
+        'cf_sync_seconds': settings.cf_sync_seconds,
+        'cf_timeout_seconds': settings.cf_timeout_seconds,
+        'cf_max_concurrency': settings.cf_max_concurrency,
+        'event_queue_size': settings.event_queue_size,
+        'target_domain': settings.target_domain,
+        'refresh_entries': settings.refresh_entries,
+        'default_ttl': settings.default_ttl,
+        'domains': domains,
+    }
+
+
 def show_config(settings: settings.Settings) -> logging.Logger:
     log = logger.set_default_logger(logging.getLogger(), settings=settings)
 
-    settings.dry_run and log.info(f'Dry Run: {settings.dry_run}')  # type: ignore
+    if settings.dry_run:
+        log.info(f'Dry Run: {settings.dry_run}')
+
     log.debug(f'Default TTL: {settings.default_ttl}')
     log.debug(f'Refresh Entries: {settings.refresh_entries}')
 
@@ -120,6 +163,10 @@ def cli() -> int:
     except (settings.ValidationError, ValueError) as e:
         print(f'Unable to load settings: {e}', file=sys.stderr)
         return 1
+
+    if args.show_config:
+        print(json.dumps(render_config(options), indent=2, default=str))
+        return 0
 
     # Set up logging and dump runtime settings
     log = show_config(options)

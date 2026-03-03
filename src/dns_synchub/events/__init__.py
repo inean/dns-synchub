@@ -22,11 +22,12 @@ T_co = TypeVar('T_co')
 
 
 class EventEmitter(Generic[T_co]):
-    def __init__(self, logger: Logger, *, origin: str):
+    def __init__(self, logger: Logger, *, origin: str, queue_maxsize: int = 0):
         self.logger = logger
         self.tracer = telemetry_tracer().get_tracer('otel.instrumentation.events')
 
         self.origin = origin
+        self.queue_maxsize = queue_maxsize
         # Subscribers
         self._subscribers: dict[EventSubscriberType[T_co], EventSubscriberDataType[T_co]] = {}
 
@@ -41,7 +42,8 @@ class EventEmitter(Generic[T_co]):
         if callback in self._subscribers:
             raise ValueError('Callback is already subscribed')
         # Register subscriber
-        self._subscribers[callback] = (asyncio.Queue[Event[T_co]](), backoff, time.time())
+        queue: asyncio.Queue[Event[T_co]] = asyncio.Queue(maxsize=self.queue_maxsize)
+        self._subscribers[callback] = (queue, backoff, time.time())
 
     def unsubscribe(self, callback: EventSubscriberType[T_co]) -> None:
         self._subscribers.pop(callback, None)
@@ -99,17 +101,26 @@ class EventEmitter(Generic[T_co]):
                 await asyncio.gather(*tasks, return_exceptions=True)
 
     # Data related methods
+    def _enqueue(self, queue: asyncio.Queue[Event[T_co]], event: Event[T_co]) -> None:
+        try:
+            queue.put_nowait(event)
+        except asyncio.QueueFull:
+            # Keep the latest snapshot when subscriber lagging behind.
+            _ = queue.get_nowait()
+            queue.put_nowait(event)
+            self.logger.warning(f'{self.origin}: subscriber queue full, dropped oldest event')
+
     def set_data(self, data: T_co, *, callback: EventSubscriberType[T_co] | None = None) -> None:
         event = Event[T_co](data=data)
         if callback:
             if callback not in self._subscribers:
                 raise KeyError('Callback is not subscribed')
             queue, _, _ = self._subscribers[callback]
-            queue.put_nowait(event)
+            self._enqueue(queue, event)
         else:
             # Broadcast data to all subscribers
             for queue, _, _ in self._subscribers.values():
-                queue.put_nowait(event)
+                self._enqueue(queue, event)
 
     def has_data(self, callback: EventSubscriberType[T_co]) -> bool:
         return callback in self._subscribers and not self._subscribers[callback][0].empty()

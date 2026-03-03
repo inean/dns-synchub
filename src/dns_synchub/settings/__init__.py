@@ -51,6 +51,7 @@ class Settings(BaseSettings):
         return logging.Formatter(fmt, '%Y-%m-%dT%H:%M:%S')
 
     # Poller Common settings
+    event_queue_size: int = 1000
 
     # Docker Settings
     enable_docker_poll: bool = True
@@ -81,6 +82,7 @@ class Settings(BaseSettings):
     cf_token: str | None = None
     cf_sync_seconds: int = 300  # Sync interval in seconds
     cf_timeout_seconds: int = 30  # Timeout for blocking requests operations
+    cf_max_concurrency: int = 10  # Max concurrent record operations per sync batch
 
     domains: list[Domains] = []
 
@@ -102,11 +104,17 @@ class Settings(BaseSettings):
 
     @model_validator(mode='after')
     def sanity_options(self) -> Self:
+        if not self.enable_docker_poll and not self.enable_traefik_poll:
+            raise ValueError('At least one poller must be enabled')
         if self.enable_traefik_poll and not self.traefik_poll_url:
             raise ValueError('Traefik Polling is enabled but no URL is set')
         if self.enable_traefik_poll and self.traefik_poll_url:
             if not re.match(r'^\w+://[^/?#]+', self.traefik_poll_url):
                 raise ValueError(f'Invalid Traefik polling URL: {self.traefik_poll_url}')
+        if self.event_queue_size < 1:
+            raise ValueError('event_queue_size must be >= 1')
+        if self.cf_max_concurrency < 1:
+            raise ValueError('cf_max_concurrency must be >= 1')
         return self
 
     @model_validator(mode='after')

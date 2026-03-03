@@ -9,7 +9,7 @@
     "opentelemetry-sdk>=1.27.0",
   ]
   description = """
-  This will build a container image to automatically update CloudFlare DNS
+  This will build a Docker image to automatically update CloudFlare DNS
   records upon container start when using Traefik as a Reverse Proxy
   """
   name = "dns-synchub"
@@ -22,7 +22,6 @@
     cloudflare = ["dns-synchub-cloudflare"]
     docker = ["dns-synchub-docker"]
     otlp = ["opentelemetry-exporter-otlp-proto-grpc >= 0.49b0"]
-    podman = ["dns-synchub-docker"]
     traefik = ["dns-synchub-traefik"]
 
   [project.urls]

@@ -52,38 +52,19 @@ class Settings(BaseSettings):
 
     # Poller Common settings
 
-    # Podman Settings (Docker-compatible API)
-    enable_podman_poll: bool = Field(
-        default=True,
-        validation_alias=AliasChoices('enable_podman_poll', 'enable_docker_poll'),
-    )
-    podman_timeout_seconds: int = Field(
-        default=5,
-        validation_alias=AliasChoices('podman_timeout_seconds', 'docker_timeout_seconds'),
-    )
-    podman_poll_seconds: int = Field(
-        default=30,
-        validation_alias=AliasChoices('podman_poll_seconds', 'docker_poll_seconds'),
-    )
-    podman_filter_value: re.Pattern[str] | None = Field(
-        default=None,
-        validation_alias=AliasChoices('podman_filter_value', 'docker_filter_value'),
-    )
-    podman_filter_label: re.Pattern[str] | None = Field(
-        default=None,
-        validation_alias=AliasChoices('podman_filter_label', 'docker_filter_label'),
-    )
-    podman_host: str = Field(
-        default='unix:///run/podman/podman.sock',
-        validation_alias=AliasChoices('podman_host', 'docker_host'),
-    )
+    # Docker Settings
+    enable_docker_poll: bool = True
+    docker_timeout_seconds: int = 5  # Timeout for requests based Docker client operations
+    docker_poll_seconds: int = 30  # Polling interval in seconds
+    docker_filter_value: re.Pattern[str] | None = None
+    docker_filter_label: re.Pattern[str] | None = None
 
     # Traefik Settings
     enable_traefik_poll: bool = False
     traefik_poll_url: str | None = None
     traefik_poll_seconds: int = 30  # Polling interval in seconds
     traefik_timeout_seconds: int = 5  # Timeout for blocking requests operations
-    traefik_excluded_providers: list[str] = ['podman', 'docker']
+    traefik_excluded_providers: list[str] = ['docker']
 
     # Mapper Settings
     target_domain: str | None = None
@@ -102,31 +83,6 @@ class Settings(BaseSettings):
     cf_timeout_seconds: int = 30  # Timeout for blocking requests operations
 
     domains: list[Domains] = []
-
-    # Legacy Docker aliases kept for compatibility with existing configs/tests.
-    @property
-    def enable_docker_poll(self) -> bool:
-        return self.enable_podman_poll
-
-    @property
-    def docker_timeout_seconds(self) -> int:
-        return self.podman_timeout_seconds
-
-    @property
-    def docker_poll_seconds(self) -> int:
-        return self.podman_poll_seconds
-
-    @property
-    def docker_filter_value(self) -> re.Pattern[str] | None:
-        return self.podman_filter_value
-
-    @property
-    def docker_filter_label(self) -> re.Pattern[str] | None:
-        return self.podman_filter_label
-
-    @property
-    def docker_host(self) -> str:
-        return self.podman_host
 
     @model_validator(mode='after')
     def update_domains(self) -> Self:

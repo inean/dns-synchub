@@ -2,7 +2,6 @@
 
 import asyncio
 import logging
-import os
 import re
 from datetime import datetime
 from functools import lru_cache
@@ -68,8 +67,8 @@ class DockerContainer:
         return []
 
 
-class PodmanPoller(Poller[DockerClient]):
-    config = {**Poller.config, 'source': 'podman'}  # type: ignore
+class DockerPoller(Poller[DockerClient]):
+    config = {**Poller.config, 'source': 'docker'}  # type: ignore
 
     def __init__(
         self,
@@ -79,15 +78,12 @@ class PodmanPoller(Poller[DockerClient]):
         client: DockerClient | None = None,
     ):
         # Computed from settings
-        self.poll_sec = settings.podman_poll_seconds
-        self.tout_sec = settings.podman_timeout_seconds
+        self.poll_sec = settings.docker_poll_seconds
+        self.tout_sec = settings.docker_timeout_seconds
 
-        # Special filter settings
-        self.filter_label = settings.podman_filter_label
-        self.filter_value = settings.podman_filter_value
-        self.podman_host = (
-            os.environ.get('PODMAN_HOST') or os.environ.get('DOCKER_HOST') or settings.podman_host
-        )
+        # Special, Docker Only filter settings
+        self.filter_label = settings.docker_filter_label
+        self.filter_value = settings.docker_filter_value
 
         self._client: DockerClient | None = client
 
@@ -98,18 +94,18 @@ class PodmanPoller(Poller[DockerClient]):
     def client(self) -> DockerClient:
         if self._client is None:
             try:
-                # Init Podman client if not provided.
-                self.logger.debug(f"Connecting to Podman at '{self.podman_host}'...")
-                self._client = docker.DockerClient(base_url=self.podman_host, timeout=self.tout_sec)
+                # Init Docker client if not provided
+                self.logger.debug('Connecting to Docker...')
+                self._client = docker.from_env(timeout=self.tout_sec)
             except Exception as err:
                 self._client = None
-                self.logger.error(f'Could not connect to Podman: {err}')
-                self.logger.error('Please make sure Podman is running and the socket is accessible')
-                raise ConnectionError('Could not connect to Podman') from err
+                self.logger.error(f'Could not connect to Docker: {err}')
+                self.logger.error('Please make sure Docker is running and accessible')
+                raise ConnectionError('Could not connect to Docker') from err
             else:
-                # Get Podman Host info
+                # Get Docker Host info
                 info = cast(dict[str, Any], self._client.info())  # type: ignore[no-untyped-call]
-                self.logger.debug(f"Connected to Podman Host at '{info.get('Name')}'")
+                self.logger.debug(f"Connected to Docker Host at '{info.get('Name')}'")
         return self._client
 
     def _is_enabled(self, container: DockerContainer) -> bool:
@@ -140,7 +136,7 @@ class PodmanPoller(Poller[DockerClient]):
                 hosts.append(host)
         # Return a collection of zones to sync
         if 'source' not in self.config:
-            raise ValueError('Container poller config must define "source"')
+            raise ValueError('Docker poller config must define "source"')
         return PollerData[PollerSourceType](hosts, self.config['source'])
 
     @override
@@ -160,10 +156,10 @@ class PodmanPoller(Poller[DockerClient]):
 
         while True:
             since = until
-            self.logger.debug('Fetching routers from Podman API')
+            self.logger.debug('Fetching routers from Docker API')
             # Ther's no swarm in podman engine, so remove Action filter
-            filters = {'Type': 'service', 'status': 'start'}
-            kwargs = {'since': since, 'filters': filters, 'decode': True}
+            filter = {'Type': 'service', 'status': 'start'}
+            kwargs = {'since': since, 'filters': filter, 'decode': True}
             events = None
             try:
                 events = await fetch_events(kwargs)
@@ -184,7 +180,7 @@ class PodmanPoller(Poller[DockerClient]):
                 self.logger.error(f'Could not fetch events: {err.last_attempt.result()}')
                 raise asyncio.CancelledError from err
             except asyncio.CancelledError:
-                self.logger.info('Podman polling cancelled. Performing cleanup.')
+                self.logger.info('Docker polling cancelled. Performing cleanup.')
                 raise
             finally:
                 _ = events and await asyncio.to_thread(events.close)
@@ -204,7 +200,7 @@ class PodmanPoller(Poller[DockerClient]):
                         result = [DockerContainer(c, logger=self.logger) for c in raw_data]
                     except Exception as err:
                         att = attempt_ctx.retry_state.attempt_number
-                        self.logger.debug(f'Podman.fetch attempt {att} failed: {err}')
+                        self.logger.debug(f'Docker.fetch attempt {att} failed: {err}')
                         raise
         except RetryError as err:
             last_error = err.last_attempt.exception()
@@ -212,9 +208,3 @@ class PodmanPoller(Poller[DockerClient]):
             raise ConnectionError('Could not fetch containers') from last_error
         # Return a collection of routes
         return self._validate(result)
-
-
-class DockerPoller(PodmanPoller):
-    """Backward-compatibility alias for Docker-named poller backend."""
-
-    config = {**Poller.config, 'source': 'docker'}  # type: ignore

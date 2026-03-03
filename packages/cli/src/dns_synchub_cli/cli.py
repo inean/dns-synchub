@@ -71,8 +71,8 @@ def show_config(settings: settings.Settings) -> logging.Logger:
             settings.enable_traefik_poll = False
             log.error(f'Traefik polling disabled: Bad url: {settings.traefik_poll_url}')
 
-    log.debug(f"Podman Polling Mode: {'On' if settings.enable_podman_poll else 'Off'}")
-    log.debug(f'Podman Poll Seconds: {settings.podman_poll_seconds}')
+    log.debug(f"Docker Polling Mode: {'On' if settings.enable_docker_poll else 'Off'}")
+    log.debug(f'Docker Poll Seconds: {settings.docker_timeout_seconds}')
 
     for dom in settings.domains:
         log.debug(f'Domain Configuration: {dom.name}')
@@ -99,12 +99,9 @@ async def run(log: Logger, *, settings: Settings) -> None:
     if settings.enable_traefik_poll:
         TraefikPoller = Poller.backends['traefik']
         pollers.append(TraefikPoller(log, settings=settings))
-    if settings.enable_podman_poll:
-        podman_backend = Poller.backends.get('podman') or Poller.backends.get('docker')
-        if podman_backend is None:
-            log.error('No Podman poller found')
-        else:
-            pollers.append(podman_backend(log, settings=settings))
+    if settings.enable_docker_poll:
+        DockerPoller = Poller.backends['docker']
+        pollers.append(DockerPoller(log, settings=settings))
 
     # Start Pollers
     try:

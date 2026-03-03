@@ -11,7 +11,7 @@
     "docker>=7.1.0",
     "tenacity>=8.0.1",
   ]
-  description = "Podman poller (sync) for DNS Synchub"
+  description = "Docker poller (sync) for DNS Synchub"
   license = "MIT"
   name = "dns-synchub-docker"
   readme = "README.md"
@@ -20,7 +20,6 @@
 
   [project.entry-points.'dns_synchub.pollers']
     docker = 'dns_synchub_docker:DockerPoller'
-    podman = 'dns_synchub_docker:PodmanPoller'
 
 [tool.uv]
   dev-dependencies = [

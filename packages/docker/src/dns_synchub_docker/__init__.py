@@ -1,6 +1,6 @@
-from dns_synchub_docker.docker import DockerPoller, PodmanPoller
+from dns_synchub_docker.docker import DockerPoller
 
-__all__ = ['PodmanPoller', 'DockerPoller']
+__all__ = ['DockerPoller']
 
 
 def __dir__() -> list[str]:

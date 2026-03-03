@@ -1,4 +1,4 @@
 # Poller Types
 from typing import Literal
 
-PollerSourceType = Literal['manual', 'docker', 'podman', 'traefik']
+PollerSourceType = Literal['manual', 'docker', 'traefik']

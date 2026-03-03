@@ -208,9 +208,6 @@ docker = [
 otlp = [
     { name = "opentelemetry-exporter-otlp-proto-grpc" },
 ]
-podman = [
-    { name = "dns-synchub-docker" },
-]
 traefik = [
     { name = "dns-synchub-traefik" },
 ]
@@ -239,7 +236,6 @@ requires-dist = [
     { name = "dns-synchub-cli", marker = "extra == 'cli'", editable = "packages/cli" },
     { name = "dns-synchub-cloudflare", marker = "extra == 'cloudflare'", editable = "packages/cloudflare" },
     { name = "dns-synchub-docker", marker = "extra == 'docker'", editable = "packages/docker" },
-    { name = "dns-synchub-docker", marker = "extra == 'podman'", editable = "packages/docker" },
     { name = "dns-synchub-traefik", marker = "extra == 'traefik'", editable = "packages/traefik" },
     { name = "opentelemetry-api", specifier = ">=1.27.0" },
     { name = "opentelemetry-exporter-otlp-proto-grpc", marker = "extra == 'otlp'", specifier = ">=0.49b0" },
@@ -247,7 +243,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.0" },
     { name = "pydantic-settings", git = "https://github.com/inean/pydantic-settings.git?rev=2.3" },
 ]
-provides-extras = ["cli", "cloudflare", "podman", "docker", "otlp", "traefik"]
+provides-extras = ["cli", "cloudflare", "docker", "otlp", "traefik"]
 
 [package.metadata.requires-dev]
 dev = [

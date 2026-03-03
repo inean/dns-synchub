@@ -21,9 +21,13 @@ except ImportError:
 
 if TYPE_CHECKING:
     from dns_synchub_cloudflare import CloudFlareDNSProvider
+    from dns_synchub_cloudflare.cloudflare import CloudFlareException
 else:
     dns_synchub_cloudflare = pytest.importorskip('dns_synchub_cloudflare')
     CloudFlareDNSProvider = dns_synchub_cloudflare.CloudFlareDNSProvider
+    CloudFlareException = pytest.importorskip(
+        'dns_synchub_cloudflare.cloudflare'
+    ).CloudFlareException
 
 
 @pytest.fixture
@@ -193,7 +197,7 @@ async def test_post_record(
         mock_cf_client.zones.dns_records.post.assert_called_with(zone_id, data=zone)
 
         # retry Call
-        with pytest.raises(CloudFlareAPIError, match='Rate limited'):
+        with pytest.raises(CloudFlareException, match='Operation failed'):
             rate_error = CloudFlareAPIError(-1, 'Rate limited')
             cast(MagicMock, mock_cf_client.zones.dns_records.post).side_effect = rate_error
             await mapper.post_record(zone_id, **zone)

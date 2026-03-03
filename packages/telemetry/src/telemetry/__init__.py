@@ -97,7 +97,6 @@ class InstrumentOptions(Generic[F]):
 
     @staticmethod
     def set_default_attributes(attributes: dict[str, AttributeValue]) -> None:
-        assert isinstance(attributes, dict)
         InstrumentOptions.default_attributes.update(attributes)
 
 
@@ -206,5 +205,6 @@ def instrument(_func_or_cls: F | None = None, **kwargs: Any) -> Callable[[F], F]
         return decorate_func(cast(F, _func_or_cls))
     else:
         # If it's a decorator without arguments, return the decorator
-        assert _func_or_cls is None
+        if _func_or_cls is not None:
+            raise TypeError('instrument() expects a callable/class or keyword arguments')
         return decorate_func

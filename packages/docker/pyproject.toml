@@ -21,11 +21,11 @@
   [project.entry-points.'dns_synchub.pollers']
     docker = 'dns_synchub_docker:DockerPoller'
 
-[tool.uv]
-  dev-dependencies = [
+[dependency-groups]
+  dev = [
     "types-docker>=7.1.0",
   ]
 
-  [tool.uv.sources]
-    dns-synchub = { workspace = true }
-    telemetry = { workspace = true }
+[tool.uv.sources]
+  dns-synchub = { workspace = true }
+  telemetry = { workspace = true }

@@ -119,11 +119,13 @@ def cli() -> int:
         args = parse_args()
         # Load settings
         options = settings.Settings(dry_run=args.dry_run)
-        # Check for uppercase docker secrets or env variables
-        assert options.cf_token
-        assert options.target_domain
-        assert len(options.domains) > 0
-    except settings.ValidationError as e:
+        if not options.cf_token:
+            raise ValueError('Missing Cloudflare API token')
+        if not options.target_domain:
+            raise ValueError('Missing target domain')
+        if len(options.domains) == 0:
+            raise ValueError('At least one domain configuration is required')
+    except (settings.ValidationError, ValueError) as e:
         print(f'Unable to load settings: {e}', file=sys.stderr)
         return 1
 

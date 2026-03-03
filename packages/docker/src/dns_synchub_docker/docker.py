@@ -110,19 +110,18 @@ class DockerPoller(Poller[DockerClient]):
 
     def _is_enabled(self, container: DockerContainer) -> bool:
         # If no filter is set, return True
-        if self.filter_label is None:
+        filter_label = self.filter_label
+        if filter_label is None:
             return True
-        # If a filter is set, check if the container matches
-        assert isinstance(self.filter_label, re.Pattern)
         # Check if any label matches the filter
         for label, value in container.labels.items():
             # Check if label is present
-            if self.filter_label.match(label):
-                if self.filter_value is None:
+            if filter_label.match(label):
+                filter_value = self.filter_value
+                if filter_value is None:
                     return True
                 # A filter value is also set, check if it matches
-                assert isinstance(self.filter_value, re.Pattern)
-                return self.filter_value.match(value) is not None
+                return filter_value.match(value) is not None
         return False
 
     def _validate(self, raw_data: list[DockerContainer]) -> PollerData[PollerSourceType]:
@@ -136,7 +135,8 @@ class DockerPoller(Poller[DockerClient]):
             for host in container.hosts:
                 hosts.append(host)
         # Return a collection of zones to sync
-        assert 'source' in self.config
+        if 'source' not in self.config:
+            raise ValueError('Docker poller config must define "source"')
         return PollerData[PollerSourceType](hosts, self.config['source'])
 
     @override

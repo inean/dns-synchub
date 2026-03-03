@@ -38,7 +38,8 @@ class EventEmitter(Generic[T_co]):
 
     async def subscribe(self, callback: EventSubscriberType[T_co], backoff: float = 0) -> None:
         # Check if callback is already subscribed
-        assert callback not in self._subscribers
+        if callback in self._subscribers:
+            raise ValueError('Callback is already subscribed')
         # Register subscriber
         self._subscribers[callback] = (asyncio.Queue[Event[T_co]](), backoff, time.time())
 
@@ -101,7 +102,8 @@ class EventEmitter(Generic[T_co]):
     def set_data(self, data: T_co, *, callback: EventSubscriberType[T_co] | None = None) -> None:
         event = Event[T_co](data=data)
         if callback:
-            assert callback in self._subscribers
+            if callback not in self._subscribers:
+                raise KeyError('Callback is not subscribed')
             queue, _, _ = self._subscribers[callback]
             queue.put_nowait(event)
         else:

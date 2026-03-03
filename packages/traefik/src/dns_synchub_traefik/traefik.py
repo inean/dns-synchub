@@ -77,7 +77,8 @@ class TraefikPoller(Poller[Session]):
                 self.logger.info(f"Found Traefik Router: {route['name']} with Hostname {host}")
                 hosts.append(host)
         # Return a collection of zones to sync
-        assert 'source' in self.config
+        if 'source' not in self.config:
+            raise ValueError('Traefik poller config must define "source"')
         return PollerData[PollerSourceType](hosts, self.config['source'])
 
     @override
@@ -97,12 +98,12 @@ class TraefikPoller(Poller[Session]):
         stop = stop_after_attempt(self.config['stop'])
         wait = wait_exponential(multiplier=self.config['wait'], max=self.tout_sec)
         rawdata: list[dict[str, Any]] = []
-        assert self._client
+        client = self.client
         try:
             async for attempt_ctx in AsyncRetrying(stop=stop, wait=wait):
                 with attempt_ctx:
                     try:
-                        response = await asyncio.to_thread(self._client.get, self.poll_url)
+                        response = await asyncio.to_thread(client.get, self.poll_url)
                         response.raise_for_status()
                         rawdata = response.json()
                     except Exception as err:

@@ -49,14 +49,15 @@ def dry_run(func: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitable[Any]
 
 def retry(func: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitable[Any]]:
     def log_before_sleep(logger: Logger, retry_state: RetryCallState) -> None:
-        assert retry_state.next_action
-        sleep_time = retry_state.next_action.sleep
+        next_action = retry_state.next_action
+        if next_action is None:
+            logger.warning('Max rate limit reached. Retrying soon...')
+            return
+        sleep_time = next_action.sleep
         logger.warning(f'Max Rate limit reached. Retry in {sleep_time} seconds...')
 
     @wraps(func)
     async def wrapper(self: 'CloudFlareDNSProvider', *args: Any, **kwargs: Any) -> Any:
-        assert isinstance(self, CloudFlareDNSProvider)
-
         retry = AsyncRetrying(
             stop=stop_after_attempt(self.config['stop']),
             wait=wait_exponential(multiplier=self.config['wait'], max=self.tout_sec),
@@ -82,7 +83,8 @@ def retry(func: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitable[Any]]:
 class CloudFlareDNSProvider(Mapper[PollerData[PollerSourceType], CloudFlare]):
     def __init__(self, logger: Logger, *, settings: Settings, client: CloudFlare | None = None):
         if client is None:
-            assert settings.cf_token is not None
+            if settings.cf_token is None:
+                raise ValueError('Cloudflare API token is required')
             client = CloudFlare(
                 token=settings.cf_token,
                 debug=settings.log_level == logging.DEBUG,
@@ -123,7 +125,6 @@ class CloudFlareDNSProvider(Mapper[PollerData[PollerSourceType], CloudFlare]):
             kind=SpanKind.CLIENT,
             attributes={'zone_id': zone_id, 'dry_run': self.dry_run, **filter},
         ):
-            assert self.client is not None
             return await asyncio.to_thread(
                 self.client.zones.dns_records.get,
                 zone_id,
@@ -138,7 +139,6 @@ class CloudFlareDNSProvider(Mapper[PollerData[PollerSourceType], CloudFlare]):
             kind=SpanKind.CLIENT,
             attributes={'zone_id': zone_id, 'dry_run': self.dry_run, **data},
         ):
-            assert self.client is not None
             result = await asyncio.to_thread(self.client.zones.dns_records.post, zone_id, data=data)
             self.logger.info(f'Created new record in zone {zone_id}: {result}')
             return result
@@ -156,7 +156,6 @@ class CloudFlareDNSProvider(Mapper[PollerData[PollerSourceType], CloudFlare]):
                 **data,
             },
         ):
-            assert self.client is not None
             result = await asyncio.to_thread(
                 self.client.zones.dns_records.put, zone_id, record_id, data=data
             )
@@ -188,7 +187,10 @@ class CloudFlareDNSProvider(Mapper[PollerData[PollerSourceType], CloudFlare]):
                     # Skip if already present and refresh entries is not required
                     records = await self.get_records(domain_info.zone_id, name=host)
                     if records and not self.refresh_entries:
-                        assert len(records) == 1
+                        if len(records) != 1:
+                            raise CloudFlareException(
+                                f'Expected one record for {host}, got {len(records)}'
+                            )
                         tasks.append(asyncio.create_task(asyncio.sleep(0, result=records.pop())))
                         self.logger.info(f'Record {host} found. Not refreshing. Skipping...')
                         continue
@@ -207,8 +209,10 @@ class CloudFlareDNSProvider(Mapper[PollerData[PollerSourceType], CloudFlare]):
                     )
                     # Update the record if it already exists
                     if records:
-                        assert len(records) == 1
-                        assert self.refresh_entries
+                        if len(records) != 1:
+                            raise CloudFlareException(
+                                f'Expected one record for {host}, got {len(records)}'
+                            )
                         future = self.put_record(domain_info.zone_id, records.pop()['id'], **domain)
                     # Create a new record if it doesn't exist yet
                     else:

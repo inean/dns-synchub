@@ -153,7 +153,8 @@ class BasePoller(ABC, PollerProtocol[T], Generic[T]):
 
 class PollerEventEmitter(EventEmitter[PollerData[PollerSourceType]]):
     def __init__(self, logger: Logger, *, poller: 'Poller[Any]'):
-        assert 'source' in poller.config
+        if 'source' not in poller.config:
+            raise ValueError(f'{poller.__class__.__name__} config must define "source"')
         self.poller = WeakRef(poller)
         super().__init__(logger, origin=poller.config['source'])
 
@@ -184,7 +185,8 @@ class Poller(BasePoller[PollerSourceType], Generic[T]):
 
     @property
     def client(self) -> T:
-        assert self._client is not None, 'Client is not initialized'
+        if self._client is None:
+            raise RuntimeError('Client is not initialized')
         return self._client
 
     @classproperty

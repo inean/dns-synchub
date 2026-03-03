@@ -42,7 +42,7 @@ def test_init(mock_logger: MagicMock, settings: Settings) -> None:
     assert poller.poll_sec == settings.traefik_poll_seconds
     assert poller.tout_sec == settings.traefik_timeout_seconds
     assert poller.poll_url == f'{settings.traefik_poll_url}/api/http/routers'
-    assert 'docker' in poller.excluded_providers
+    assert 'podman' in poller.excluded_providers
 
 
 @pytest.mark.asyncio

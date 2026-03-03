@@ -41,7 +41,7 @@ This work is a rewrite of [docker-traefik-cloudflare-companion](https://github.c
       - [By Label (Docker Endpoint only)](#by-label-docker-endpoint-only)
   - [Configuration](#configuration)
     - [Requirements](#requirements)
-      - [Access to Docker Socket](#access-to-docker-socket)
+      - [Access to Podman Socket](#access-to-podman-socket)
       - [Security Considerations](#security-considerations)
         - [Secrets](#secrets)
       - [Example Docker Compose Configuration](#example-docker-compose-configuration)
@@ -74,7 +74,7 @@ This work is a rewrite of [docker-traefik-cloudflare-companion](https://github.c
 
 - Requires [Traefik](https://traefik.io/) v2.0 or later as a reverse proxy. Traefik is a modern HTTP reverse proxy and load balancer that simplifies deploying microservices.
 
-- Supports only [Docker Engine](https://www.docker.com/products/docker-engine) or compatible (e.g., [Podman](https://podman.io/)). Docker Engine is the industry-leading container runtime, and Podman is a daemonless container engine for developing, managing, and running OCI Containers on your Linux system.
+- Supports [Podman](https://podman.io/) as the default container runtime. Docker-compatible APIs are still supported for backward compatibility.
 
 ## Installation
 
@@ -112,7 +112,7 @@ Upon startup, the image scans containers for Traefik labels used to define routi
 
 ### Discovery
 
-`dns-synchub` supports two discovery modes: Docker and Traefik Polling. By default, only the Docker discovery mode is enabled. Once matching hosts are discovered, `dns-synchub` will add or update DNS records in Cloudflare to point to the configured `TARGET_DOMAIN`.
+`dns-synchub` supports two discovery modes: Podman and Traefik Polling. By default, only the Podman discovery mode is enabled. Once matching hosts are discovered, `dns-synchub` will add or update DNS records in Cloudflare to point to the configured `TARGET_DOMAIN`.
 
 #### Configuring DNS Record Updates
 
@@ -170,15 +170,15 @@ Exclude patterns can be specified by defining one or more `EXCLUDED_HOST__` vari
 
 These regular expressions are used to determine if a host should be excluded from the synchronization process. Exclude patterns are applied after include patterns, ensuring that any host matching an exclude pattern is filtered out, even if it matches an include pattern.
 
-#### By Label (Docker Endpoint only)
+#### By Label (Podman Endpoint only)
 
-When both `DOCKER_FILTER_LABEL` and `DOCKER_FILTER_VALUE` are set, `dns-synchub` will only operate on containers that match these specified label-value pairs. This feature is particularly useful in environments where multiple instances of Traefik and `dns-synchub` are running on the same system or cluster. It allows for precise targeting of specific containers, ensuring that only those with the designated labels are affected.
+When both `PODMAN_FILTER_LABEL` and `PODMAN_FILTER_VALUE` are set, `dns-synchub` will only operate on containers that match these specified label-value pairs. This feature is particularly useful in environments where multiple instances of Traefik and `dns-synchub` are running on the same system or cluster. It allows for precise targeting of specific containers, ensuring that only those with the designated labels are affected.
 
 For example:
 
 ```bash
-DOCKER_CONSTRAINT_LABEL=traefik.constraint
-DOCKER_CONSTRAINT_VALUE=proxy-public
+PODMAN_FILTER_LABEL=traefik.constraint
+PODMAN_FILTER_VALUE=proxy-public
 ```
 
 In your serving container:
@@ -197,28 +197,28 @@ services:
 
 ## Configuration
 
-The quickest way to get started is using [docker-compose](https://docs.docker.com/compose/). To properly update zones on [Cloudflare](https://www.cloudflare.com/), the `dns-synchub` container may require special permissions to run. Specifically, it needs access to `/var/run/docker.sock`.
+The quickest way to get started is using [docker-compose](https://docs.docker.com/compose/) or Podman Compose. To properly update zones on [Cloudflare](https://www.cloudflare.com/), the `dns-synchub` container may require special permissions to run. Specifically, it needs access to the Podman socket.
 
 ### Requirements
 
-#### Access to Docker Socket
+#### Access to Podman Socket
 
-The container must have access to `/var/run/docker.sock` to interact with the Docker daemon and manage DNS updates based on container events.
+The container must have access to `/run/podman/podman.sock` (or your configured `PODMAN_HOST`) to interact with the Podman API and manage DNS updates based on container events.
 
 #### Security Considerations
 
-To use the leaked socket in the container, you need to run the container with the command-line option `--security-opt apparmor=unconfined`. This option disables SELinux security labeling, allowing the container to access the Docker socket.
+To use the leaked socket in the container, you need to run the container with the command-line option `--security-opt apparmor=unconfined`. This option disables SELinux security labeling, allowing the container to access the Podman socket.
 
 ##### Secrets
 
-Sensitive information can be securely managed using Docker Secrets. To pass the Cloudflare Scoped Token to `dns-synchub`, follow these steps:
+Sensitive information can be securely managed using container secrets. To pass the Cloudflare Scoped Token to `dns-synchub`, follow these steps:
 
-1. Create a Docker Secret named `cf_token` containing your Cloudflare Scoped API token.
+1. Create a secret named `cf_token` containing your Cloudflare Scoped API token.
 1. Ensure the secret is accessible to the container.
 
-Docker automatically makes the secret available to the container, allowing `dns-synchub` to securely access the token. By default, `dns-synchub` looks for secrets defined in the `/var/run` directory.
+The runtime makes the secret available to the container, allowing `dns-synchub` to securely access the token. By default, `dns-synchub` looks for secrets defined in the `/var/run` directory.
 
-#### Example Docker Compose Configuration
+#### Example Compose Configuration
 
 ```yaml
 version: '3.8'
@@ -226,7 +226,7 @@ services:
   zone-updater:
     image: ghcr.io/inean/dns-synchub:latest
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      - /run/podman/podman.sock:/run/podman/podman.sock
     security_opt:
       - apparmor=unconfined
     secrets:
@@ -258,14 +258,14 @@ secrets:
 
 The current implementation supports two types of pollers for fetching services to create DNS records:
 
-1. **Docker Poller**: Retrieves services directly from Docker.
+1. **Podman Poller**: Retrieves services directly from Podman.
 1. **Traefik Poller**: Fetches services managed by Traefik.
 
 Pollers are responsible for fetching available services and passing them to the sync service.
 
-#### Docker
+#### Podman
 
-`dns-synchub` will discover running Docker containers by searching for supported labels.
+`dns-synchub` will discover running Podman containers by searching for supported labels.
 
 To assign multiple DNS records to a single container, use the following format, similar to how Traefik defines routes:
 
@@ -273,22 +273,22 @@ To assign multiple DNS records to a single container, use the following format, 
   - traefik.http.routers.example.rule=Host(`example1.domain.tld`) || Host(`example2.domain.tld`)
 ```
 
-##### Docker Options
+##### Podman Options
 
 | Parameter                | Description                           | Type   | Default |
 | ------------------------ | ------------------------------------- | ------ | ------- |
-| `ENABLE_DOCKER_POLL`     | Enable or disable Docker polling.     | `BOOL` | `TRUE`  |
-| `DOCKER_TIMEOUT_SECONDS` | Timeout for HTTP calls to Docker API. | `INT`  | `5`     |
-| `DOCKER_POLL_SECONDS`    | Polling interval in seconds.          | `INT`  | `30`    |
+| `ENABLE_PODMAN_POLL`     | Enable or disable Podman polling.     | `BOOL` | `TRUE`  |
+| `PODMAN_TIMEOUT_SECONDS` | Timeout for HTTP calls to Podman API. | `INT`  | `5`     |
+| `PODMAN_POLL_SECONDS`    | Polling interval in seconds.          | `INT`  | `30`    |
 
-##### Filtering (Docker exclusively)
+##### Filtering (Podman exclusively)
 
 | Parameter             | Description                         | Type  | Default              |
 | --------------------- | ----------------------------------- | ----- | -------------------- |
-| `DOCKER_FILTER_LABEL` | A Pattern to filter Traefik label.  | `STR` | `traefik.constraint` |
-| `DOCKER_FILTER_VALUE` | A Pattern to filter Traefik values. | `STR` | `.*`                 |
+| `PODMAN_FILTER_LABEL` | A Pattern to filter Traefik label.  | `STR` | `traefik.constraint` |
+| `PODMAN_FILTER_VALUE` | A Pattern to filter Traefik values. | `STR` | `.*`                 |
 
-> **Note:** If `DOCKER_FILTER_VALUE` is not defined, `dns-snchub` will not filter containers based on `DOCKER_FILTER_LABEL`. If it is defined, `dns-synchub` will apply the specified pattern, and only the services that match this pattern will be used to update DNS records.
+> **Note:** If `PODMAN_FILTER_VALUE` is not defined, `dns-snchub` will not filter containers based on `PODMAN_FILTER_LABEL`. If it is defined, `dns-synchub` will apply the specified pattern, and only the services that match this pattern will be used to update DNS records.
 
 #### Traefik
 
@@ -299,7 +299,7 @@ To enable Traefik Polling mode, set the following environment variables:
 
 In this mode, `dns-synchub` will poll Traefik every 30 seconds by default. During each poll, it will discover routers and include hosts that match the following criteria:
 
-1. The provider is not Docker.
+1. The provider is not Podman.
 1. The status is enabled.
 1. The name is present.
 1. The rule contains `Host(...)`.

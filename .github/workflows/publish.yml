@@ -87,7 +87,7 @@ jobs:
       # Skip step because unsupported env variable: ACTIONS_ID_TOKEN_REQUEST_URL
       # See https://github.com/nektos/act/issues/329
       - name: Generate artifact attestation
-        uses: actions/attest-build-provenance@v1
+        uses: actions/attest-build-provenance@v4
         if: ${{ !env.ACT && github.event_name != 'pull_request' }}
         with:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}

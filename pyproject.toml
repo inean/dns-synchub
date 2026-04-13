@@ -2,7 +2,7 @@
   authors = [{ name = "Carlos Martín", email = "inean.es@gmail.com" }]
   dependencies = [
     #settings
-    "pydantic >= 2.0",
+    "pydantic >= 2.12.5",
     "pydantic-settings @ git+https://github.com/inean/pydantic-settings.git@2.3",
     # telemetry
     "opentelemetry-api>=1.27.0",

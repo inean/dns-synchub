@@ -21,7 +21,7 @@
     cli = ["dns-synchub-cli"]
     cloudflare = ["dns-synchub-cloudflare"]
     docker = ["dns-synchub-docker"]
-    otlp = ["opentelemetry-exporter-otlp-proto-grpc >= 0.49b0"]
+    otlp = ["opentelemetry-exporter-otlp-proto-grpc >= 1.41.0"]
     traefik = ["dns-synchub-traefik"]
 
   [project.urls]

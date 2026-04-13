@@ -50,7 +50,7 @@
     "pytest-mock >=3.14.0",
     "pytest-pretty>=1.2.0",
     "pytest>=8.3.2",
-    "types-docker>=7.1.0",
+    "types-docker>=7.1.0.20260409",
     "types-requests>=2.32.0",
   ]
 

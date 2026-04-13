@@ -38,7 +38,7 @@
     "bump-my-version>=0.27.0",
     "pre-commit>=3.7.1",
     # lint
-    "deptry>=0.20.0",
+    "deptry>=0.25.1",
     "mypy>=1.11.2",
     "pyupgrade>=3.16.0",
     "pyright>=1.1.389",
